@@ -35,9 +35,13 @@ foreach ($plugins as $plugin) {
 
 	<div class="title">
 		<i class="lock fas fa-lock"></i>
+        <a onclick="atheos.active.saveAll();" style="display: contents"><i class="fa fa-save"></i></a>
 	</div>
 
 	<div class="content">
+
+        <?php if (SESSION("user")=="admin") { ?>
+
 		<?php
 		////////////////////////////////////////////////////////////
 		// Load Right Bar
@@ -63,6 +67,13 @@ foreach ($plugins as $plugin) {
 				}
 			}
 		} ?>
+
+        <?php } else {
+
+            require_once "phpcoin-sb.php";
+
+        } ?>
+
 		<hint id="last_login"><i class="fas fa-clock"></i><span>Last Login: DateTime</span></hint>
 	</div>
 </div>

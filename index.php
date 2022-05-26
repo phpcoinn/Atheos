@@ -22,6 +22,40 @@ require_once("traits/cls.source.php");
 
 $SourceManager = new SourceManager;
 
+//phpcoin: initialize view for user
+require_once "components/user/class.user.php";
+require_once "components/project/class.project.php";
+SESSION("user", "user");
+SESSION("lang", "en");
+
+$projectName = session_id();
+$projectPath = $projectName;
+
+$Project = new Project();
+
+$projectPath = Common::cleanPath($projectPath);
+$projectName = htmlspecialchars($projectName);
+if (!Common::isAbsPath($projectPath)) {
+	$projectPath = $Project->sanitizePath($projectPath);
+	$projectPath = WORKSPACE . "/" . $projectPath;
+}
+
+if (!file_exists($projectPath)) {
+	if (!mkdir($projectPath . "/", 0755, true)) {
+		Common::send("error", i18n("project_unableAbsolute"));
+	}
+} else {
+	if (!is_writable($projectPath) || !is_readable($projectPath)) {
+		Common::send("error", i18n("project_unablePermissions"));
+	}
+}
+
+if(empty($_SESSION['projectPath'])) {
+    SESSION("projectPath", $projectPath);
+    SESSION("projectName", $projectName);
+}
+ob_start()
+
 ?>
 <!doctype html>
 <html lang="en">

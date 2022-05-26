@@ -54,7 +54,8 @@ class Project {
 	//////////////////////////////////////////////////////////////////////////80
 	// Create
 	//////////////////////////////////////////////////////////////////////////80
-	public function create($projectName, $projectPath, $gitRepo, $gitBranch) {
+	//phpcoin: allow non ajax call
+	public function create($projectName, $projectPath, $gitRepo, $gitBranch, $ajax=true) {
 
 		$projectPath = Common::cleanPath($projectPath);
 		$projectName = htmlspecialchars($projectName);
@@ -88,6 +89,11 @@ class Project {
 			$cmd = Common::isAbsPath($projectPath) ? "cd " . escapeshellarg($projectPath) : "cd " . escapeshellarg(WORKSPACE . "/" . $projectPath);
 			$cmd .= " && git init && git remote add origin " . escapeshellarg($gitRepo) . " && git pull origin " . escapeshellarg($gitBranch);
 			Common::execute($cmd);
+		}
+
+		//phpcoin: allow non ajax call
+		if(!$ajax) {
+			return;
 		}
 
 		// Log Action

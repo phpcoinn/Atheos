@@ -12,6 +12,23 @@
 
 require_once("common.php");
 
+
+if(isset($_REQUEST['toggleTheme'])) {
+    if(isset($_SESSION['theme'])) {
+        if($_SESSION['theme']=="dark") {
+	        $_SESSION['theme']="light";
+        } else {
+	        $_SESSION['theme']="dark";
+        }
+    } else {
+	    $_SESSION['theme']="light";
+    }
+	$url = $_SERVER['REQUEST_URI'];
+    $url = str_replace("?&toggleTheme", "", $url);
+    header("location: ".$url);
+    exit;
+}
+
 if (defined("HEADERS") && HEADERS) {
 	foreach (unserialize(HEADERS) as $val) {
 		header($val);
@@ -54,6 +71,12 @@ if(empty($_SESSION['projectPath'])) {
     SESSION("projectPath", $projectPath);
     SESSION("projectName", $projectName);
 }
+
+$theme = "dark";
+if(isset($_SESSION['theme'])) {
+    $theme = $_SESSION['theme'];
+}
+
 ob_start()
 
 ?>
@@ -72,6 +95,9 @@ ob_start()
 	// Load THEME
 	echo("<!-- THEME -->\n");
 	echo("\t<link rel=\"stylesheet\" href=\"theme/main.min.css\">\n");
+    if($theme!="dark") {
+	    echo("\t<link rel=\"stylesheet\" href=\"theme/custom.css\">\n");
+    }
 
 	// LOAD FONTS
 	$SourceManager->linkResource("css", "fonts", DEVELOPMENT);

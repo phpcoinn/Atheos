@@ -516,10 +516,10 @@ foreach($list as $item) {
 require_once('components/settings/class.settings.php');
 $activeUser = SESSION("user");
 $Settings = new Settings($activeUser);
-$settings = $Settings->db->select("*");
+$settings = $_SESSION['settings'];
 ?>
 
-<form class="" method="post" action="" onsubmit="onSubmit(event)">
+<form class="p-2" method="post" action="" onsubmit="onSubmit(event)">
 
     <div class="flex align-items-center align-content-between">
         <div class="">

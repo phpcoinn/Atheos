@@ -36,6 +36,7 @@ foreach ($plugins as $plugin) {
 	<div class="title">
 		<i class="lock fas fa-lock"></i>
         <a onclick="atheos.active.saveAll();" style="display: contents"><i class="fa fa-save"></i></a>
+        <a href="<?php echo $_SERVER['REQUEST_URI'] ?>?&toggleTheme" style="display: contents"><i class="fa fa-sun"></i></a>
 	</div>
 
 	<div class="content">

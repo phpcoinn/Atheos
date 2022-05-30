@@ -37,7 +37,8 @@ class Settings {
 	// Load User Settings
 	//////////////////////////////////////////////////////////////////////////80
 	public function load() {
-		$settings = $this->db->select("*");
+		$settings = $_SESSION['settings'];
+//		$settings = $this->db->select("*");
 		if (!empty($settings)) {
 			Common::send("success", $settings);
 		} else {
@@ -49,7 +50,8 @@ class Settings {
 	// Save User Settings
 	//////////////////////////////////////////////////////////////////////////80
 	public function save($key, $value) {
-		$this->db->update($key, $value, true);
+//		$this->db->update($key, $value, true);
+		$_SESSION['settings'][$key]=$value;
 		Common::send("success");
 	}
 }

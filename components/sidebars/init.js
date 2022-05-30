@@ -118,7 +118,7 @@
 
 			function removeListeners() {
 				setTimeout(function() {
-					atheos.settings.save('sidebars.sb-' + side + '-width', width);
+					atheos.settings.save('sidebars.sb-' + side + '-width', width, true);
 				}, 200);
 
 				storage('sidebars.sb-' + side + '-width', width);

@@ -128,7 +128,7 @@ ob_start()
 		<div id="workspace">
 			<div id="contextmenu"></div>
 
-			<?php require_once('components/sidebars/sb-left.php'); ?>
+			<?php require_once("components/sidebars/sb-left.php"); ?>
 
 			<div id="ACTIVE">
 				<ul id="active_file_tabs" class="tabList"></ul>
@@ -155,7 +155,7 @@ ob_start()
 				<span id="cursor-position"><?php echo i18n("ln"); ?>: 0 &middot; <?php echo i18n("col"); ?>: 0</span>
 			</div>
 
-			<?php require_once('components/sidebars/sb-right.php'); ?>
+			<?php require_once("components/sidebars/sb-right.php"); ?>
 
 		</div>
 
@@ -176,17 +176,18 @@ ob_start()
 		$SourceManager->linkResource("js", "plugins", DEVELOPMENT);
 
 	} else {
-		$path = __DIR__ . "/data/";
+	    // If constant DATA defined in config.php, use it. Otherwise fall back to default folder location
+	    $path = defined("DATA") ? DATA . "/" : __DIR__ . "/data/";
 
 		$users = file_exists($path . "users.json");
 		$projects = file_exists($path . "projects.json");
 
 		if (!$users && !$projects) {
 			// Installer
-			require_once('components/install/view.php');
+			require_once("components/install/view.php");
 		} else {
 			// Login form
-			require_once('components/user/login.php');
+			require_once("components/user/login.php");
 		}
 	}
 

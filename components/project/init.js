@@ -8,15 +8,10 @@
 // Authors: Codiad Team, @Fluidbyte, Atheos Team, @hlsiira
 //////////////////////////////////////////////////////////////////////////////80
 
-(function(global) {
+(function() {
+	'use strict';
 
-	var atheos = global.atheos;
-
-	var self = null;
-
-	carbon.subscribe('system.loadMinor', () => atheos.project.init());
-
-	atheos.project = {
+	const self = {
 
 		//projectmanager
 		sideExpanded: true,
@@ -27,8 +22,6 @@
 		},
 
 		init: function() {
-			self = this;
-
 			self.load();
 			self.dock.load();
 
@@ -124,8 +117,8 @@
 				settled: function(status, reply) {
 					atheos.toast.show(reply);
 					if (status === 'error') return;
-					
-					if(reply.restore) {
+
+					if (reply.restore) {
 						atheos.filemanager.rescanChildren = reply.state;
 					}
 
@@ -158,10 +151,10 @@
 
 			oX('#file-manager').html(
 				`<ul>
-				<li>
+				<li class="draggable">
 					<a id="project-root" data-type="root" data-path="${path}">
 						${repoIcon}
-						<i class="root fa fa-folder blue"></i>
+						<i class="root fa fa-folder blue" data-type="root"></i>
 						<span>${name}</span>
 					</a>
 					<ul></ul>
@@ -225,60 +218,33 @@
 			}
 		},
 
-		//////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////80
 		// Create Project
-		//////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////80
 		create: function() {
-
-			var projectName, projectPath, gitRepo, gitBranch;
-
-			var createProject = function() {
-				var data = {
-					target: 'project',
-					action: 'create',
-					projectName,
-					projectPath,
-					gitRepo,
-					gitBranch
-				};
-
-				echo({
-					url: atheos.controller,
-					data,
-					success: function(reply) {
-						if (reply.status !== 'error') {
-							self.open(reply.name, reply.path);
-							self.dock.load();
-							/* Notify listeners. */
-							delete data.action;
-							carbon.publish('project.create', data);
-						}
-					}
-				});
-			};
 
 			var listener = function(e) {
 				e.preventDefault();
 
-				projectName = oX('#dialog form input[name="projectName"]').value();
-				projectPath = oX('#dialog form input[name="projectPath"]').value();
-				gitRepo = oX('#dialog form input[name="gitRepo"]').value();
-				gitBranch = oX('#dialog form input[name="gitBranch"]').value();
+				let name = oX('#dialog form input[name="projectName"]').value(),
+					path = oX('#dialog form input[name="projectPath"]').value(),
+					repo = oX('#dialog form input[name="gitRepo"]').value(),
+					branch = oX('#dialog form input[name="gitBranch"]').value();
 
 
-				if (projectPath.indexOf('/') === 0) {
+				if (path.indexOf('/') === 0) {
 					atheos.alert.show({
 						banner: 'Do you really want to create a project with an absolute path?',
-						data: projectPath,
+						data: path,
 						actions: {
 							'Yes': function() {
-								createProject();
+								self.createProject(name, path, repo, branch);
 							},
 							'No': function() {}
 						}
 					});
 				} else {
-					createProject();
+					self.createProject(name, path, repo, branch);
 				}
 			};
 
@@ -297,10 +263,37 @@
 			});
 		},
 
-		//////////////////////////////////////////////////////////////////
-		// Rename Project
-		//////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////80
+		// Create Project
+		//////////////////////////////////////////////////////////////////////80
+		createProject: function(projectName, projectPath, gitRepo, gitBranch) {
+			var data = {
+				target: 'project',
+				action: 'create',
+				projectName,
+				projectPath,
+				gitRepo,
+				gitBranch
+			};
 
+			echo({
+				url: atheos.controller,
+				data,
+				success: function(reply) {
+					if (reply.status !== 'error') {
+						self.open(reply.name, reply.path);
+						self.dock.load();
+						/* Notify listeners. */
+						delete data.action;
+						carbon.publish('project.create', data);
+					}
+				}
+			});
+		},
+
+		//////////////////////////////////////////////////////////////////////80
+		// Rename Project
+		//////////////////////////////////////////////////////////////////////80
 		rename: function(oldName, projectPath) {
 
 			var listener = function(e) {
@@ -410,4 +403,7 @@
 			return self.current.path;
 		}
 	};
-})(this);
+
+	carbon.subscribe('system.loadMinor', () => self.init());
+	atheos.project = self;
+})();

@@ -39,7 +39,7 @@ class Filemanager {
 			fclose($file);
 			Common::send("success", array("modifyTime" => $modifyTime));
 		} else {
-			$error = error_get_last();
+			// $error = error_get_last();
 			Common::send("error", i18n("path_unableCreate"));
 		}
 	}
@@ -107,7 +107,7 @@ class Filemanager {
 		$info = pathinfo($path);
 
 		$parent = $info["dirname"];
-		$base = $info["basename"];
+		// $base = $info["basename"];
 		$ext = $info["extension"];
 
 		$des = $parent."/".$name;
@@ -244,10 +244,10 @@ class Filemanager {
 		$files = array();
 		foreach ($index as $item => $data) {
 			$link = false;
-			if(is_link($data["path"])) {
+			if (is_link($data["path"])) {
 				$link = readlink($data["path"]);
 			}
-			
+
 			if ($data["type"] === "folder") {
 
 				$repo = file_exists($data["path"] . "/.git");
@@ -334,8 +334,9 @@ class Filemanager {
 			$prot = "http://";
 		}
 		$domain = SERVER("HTTP_HOST");
-		$url = rtrim($prot . $domain . "/workspace/" . Common::getRelativePath($path), "/");
-
+		$page = pathinfo(SERVER("REQUEST_URI"), PATHINFO_DIRNAME);
+		$url = rtrim($prot . $domain . $page . "/workspace/" . Common::getRelativePath($path), "/");
+		$url = str_replace("//workspace", "/workspace", $url);
 		Common::send("success", $url);
 	}
 

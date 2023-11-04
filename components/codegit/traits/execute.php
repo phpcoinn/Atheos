@@ -9,45 +9,26 @@ trait Execute {
 		$cmd = str_replace("\#", "#", $cmd);
 		$cmd = str_replace("\(", "(", $cmd);
 		$cmd = str_replace("\)", ")", $cmd);
-
 		$result = Common::execute($cmd . ' 2>&1');
-		$code = $result["code"];
-		
-		if ($code === 0) {
-			return explode("\n", $result["text"]);
-		} else {
-			return false;
-		}
+
+		$result = $this->parseReturn($result);
+		return $result;
 	}
 
-	private function parseCommandCodes($code) {
+	private function parseReturn($result) {
 
-		// $codes = array(
-		// 	0 => true,
-		// 	1 => false,
-		// 	3 => "login_required",
-		// 	4 => "login_required",
-		// 	7 => "password_required",
-		// 	64 => "error",
-		// );
-
-		// if(in_array($code, $codes)) {
-		// 	return $codes[$code];
-		// } else {
-		// 	return false;
-		// }
-
-		switch ($code) {
+		if ($result["code"] === 0) {
 			// Success
-			case 0:
-				return true;
-				break;
-			case 1:
-				return false;
-				break;
-			default:
-				return $code;
-				break;
+			$result["status"] = "success";
+		} elseif ($result["code"] === 128) {
+			// Host key error
+			$result["status"] = "warning";
+		} else {
+			// Generic error
+			$result["status"] = "error";
 		}
+
+		$result["text"] = explode("\n", $result["text"]);
+		return $result;
 	}
 }

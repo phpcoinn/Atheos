@@ -250,8 +250,11 @@
 		"new": "New Account",
 		"create": "Create Account",
 		"delete": "Delete Account",
-		"confirm": "Confirm Account Deletion"
+		"confirm": "Confirm Account Deletion",
+		"download": "Download Bulk Template",
+		"upload": "Upload Bulk Accounts"
 	},
+	
 	"account:": "Account:",
 
 	"username": {
@@ -536,7 +539,14 @@
 
 	"git": {
 		"error": {
-			"noRepo": "Git repo not found."
+			"noRepo": "Git repo not found.",
+			"noPath": "Missing path.",
+			"noRepoFileMsg": "Missing repo, file or message.",
+			"noRepoFile": "Missing repo or file.",
+			"noPathUrl": "Missing path or URL.",
+			"noTypeRepoRemoteBranch": "Missing type, repo, remote or branch.",
+			"noRepoType": "Missing repo or type.",
+			"invalidAction": "Invalid action."
 		},
 		"init": {
 			"": "Git Init",
@@ -553,6 +563,7 @@
 			"invalid": "Invalid Repository URL"
 		},
 		"status": {
+			"": "Commit Status:",
 			"current": "Branch is up to date",
 			"ahead": {
 				"single": "Ahead %s Commit",
@@ -599,8 +610,15 @@
 		},
 		"addFailed": "Failed to add %s",
 		"commit": {
+			"": "Commit",
+			"message": "Enter commit message here (optional to amend)...",
 			"success": "Changes commited.",
 			"failed": "Changes could not be committed."
+		},
+		"amend": {
+			"": "Amend",
+			"success": "Changes commited with amend option.",
+			"failed": "Changes could not be committed with amend option."
 		},
 		"settings": {
 			"local": "Git Settings for %s",
@@ -612,6 +630,15 @@
 			"apply": {
 				"success": "Settings Applied.",
 				"failed": "Unabled to apply settings."
+			}
+		},
+		"objects": {
+			"status": "Status",
+			"file": "File",
+			"actions": {
+				"": "Actions",
+				"diff": "Diff",
+				"undo": "Undo"
 			}
 		}
 	},

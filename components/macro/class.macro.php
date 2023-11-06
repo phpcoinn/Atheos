@@ -139,6 +139,9 @@ class Macro {
 	// Execute Macro
 	//////////////////////////////////////////////////////////////////////////80
 	public function execute($uuid, $path) {
+
+		Common::send("error", "Not allowed");
+
 		$path = Common::getWorkspacePath($path);
 		$where = array(["uuid", "==", $uuid]);
 		$macro = $this->db->select($where);

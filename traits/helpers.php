@@ -57,6 +57,10 @@ trait Helpers {
 	public static function data($type = false, $key = false, $val = null) {
 		if (!$type || !$key) return $val;
 
+        if($key=="projectPath" && $type == "SESSION" && $val != null) {
+            $a=1;
+        }
+
 		if (!empty($val) && $type === "SESSION") {
 			$_SESSION[$key] = $val;
 		}

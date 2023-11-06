@@ -301,7 +301,7 @@ class Filemanager {
 	//////////////////////////////////////////////////////////////////////////80
 	public function open($path) {
 		if (!$path || !is_file($path)) {
-			Common::send("error", "Invalid path.");
+			Common::send("error", "Invalid path $path.");
 		}
 
 		$output = file_get_contents($path);

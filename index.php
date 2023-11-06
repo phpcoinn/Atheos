@@ -45,8 +45,8 @@ require_once "components/project/class.project.php";
 SESSION("user", "user");
 SESSION("lang", "en");
 
-$projectName = session_id();
-$projectPath = $projectName;
+$projectName = "example";
+$projectPath = session_id();
 
 $Project = new Project();
 

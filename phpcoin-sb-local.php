@@ -163,6 +163,9 @@ if(isset($_POST['sign_contract'])) {
     $address=$_POST['address'];
     $amount=$_POST['deploy_amount'];
 
+    $_SESSION['contract']['deploy_amount']=$_POST['deploy_amount'];
+    $_SESSION['contract']['deploy_params']=$_POST['deploy_params'];
+
     if(empty($amount)) $amount=0;
 
     $post_deploy_params = $_POST['deploy_params'];
@@ -181,7 +184,6 @@ if(isset($_POST['sign_contract'])) {
     ];
 
     $text = base64_encode(json_encode($data));
-    $_SESSION['contract']['signature_code']=$text;
 
     $url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/sign.php?&app=Atheos&address=$address&redirect=$redirect&no_return_message=1";
     echo '<!doctype html>
@@ -214,16 +216,22 @@ if(isset($_POST['deploy'])) {
 		header("location: ".$_SERVER['REQUEST_URI']);
 		exit;
 	}
-	$sc_address = $_POST['sc_address'];
-	if(empty($sc_address)) {
+	$deploy_address = $_POST['deploy_address'];
+	if(empty($deploy_address)) {
 		$_SESSION['msg']=[['icon'=>'error', 'text'=>'Contract address is required']];
 		header("location: ".$_SERVER['REQUEST_URI']);
 		exit;
 	}
 
-    $_SESSION['contract']['address']=$sc_address;
+    if(!Account::valid($deploy_address)) {
+        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Contract address is not valid']];
+        header("location: ".$_SERVER['REQUEST_URI']);
+        exit;
+    }
 
-    $smartContract = api_get("/api.php?getSmartContract&address=$sc_address");
+    $_SESSION['deploy_address']=$deploy_address;
+
+    $smartContract = api_get("/api.php?getSmartContract&address=$deploy_address");
 	if($smartContract && !$virtual) {
 		$_SESSION['msg']=[['icon'=>'error', 'text'=>'Smart contract with address already exists']];
 		header("location: ".$_SERVER['REQUEST_URI']);
@@ -232,7 +240,7 @@ if(isset($_POST['deploy'])) {
 
     $public_key = $_SESSION['account']['public_key'];
 
-	$signature = $_POST['signature'];
+	$signature = $_POST['deploy_signature'];
 	$msg = $signature;
 	$date = $_POST['date'];
 	$compiled_code = $_POST['compiled_code'];
@@ -261,8 +269,8 @@ if(isset($_POST['deploy'])) {
     $_SESSION['deploy_amount']=$_POST['deploy_amount'];
     $deploy_amount = floatval($_POST['deploy_amount']);
 
-	$transaction = new Transaction($public_key,$sc_address,$deploy_amount,TX_TYPE_SC_CREATE,$date, $msg, TX_SC_CREATE_FEE);
-	$transaction->signature = $signature;
+	$transaction = new Transaction($public_key,$deploy_address,$deploy_amount,TX_TYPE_SC_CREATE,$date, $msg, TX_SC_CREATE_FEE);
+//	$transaction->signature = $signature;
 	$transaction->data = $txdata;
 
 	if($virtual) {
@@ -279,13 +287,13 @@ if(isset($_POST['deploy'])) {
         } else {
             $_SESSION['transactions'][]=$transaction->toArray();
 	        $_SESSION['accounts'][$address]['balance']=$_SESSION['accounts'][$address]['balance'] - TX_SC_CREATE_FEE;
-            $_SESSION['accounts'][$sc_address]['balance']+=$deploy_amount;
+            $_SESSION['accounts'][$deploy_address]['balance']+=$deploy_amount;
         }
 
-		$interface = SmartContractEngine::getInterface($sc_address);
+		$interface = SmartContractEngine::getInterface($deploy_address);
 
 		$_SESSION['contract']=[
-			"address"=>$sc_address,
+			"address"=>$deploy_address,
 			"height"=>1,
 			"code"=>$compiled_code,
 			"signature"=>$signature,
@@ -370,8 +378,8 @@ if(isset($_POST['save'])) {
 	$_SESSION['engine'] = $engine;
     $virtual = $engine == "virtual";
     if(!$virtual) {
-        unset($_SESSION['account']);
-        unset($_SESSION['sc_account']);
+//        unset($_SESSION['account']);
+//        unset($_SESSION['sc_account']);
 //	    $_SESSION['account']['address'] = $_POST['address'];
 //	    $_SESSION['account']['private_key'] = $_POST['private_key'];
 //	    $_SESSION['sc_account']['address'] = $_POST['sc_address'];
@@ -380,11 +388,26 @@ if(isset($_POST['save'])) {
 	exit;
 }
 
+if(isset($_POST['set_contract'])) {
+    $contract = $_POST['contract'];
+    $address = $_SESSION['account']['address'];
+    $deployedContracts = api_get("/api.php?q=getDeployedSmartContracts&address=$address");
+    $_SESSION['contract']=null;
+    foreach ($deployedContracts as $deployedContract) {
+        if($deployedContract['address']==$contract) {
+            $_SESSION['contract']=$deployedContract;
+            $_SESSION['contract']['deployed']=true;
+            $_SESSION['contract']['interface'] = SmartContractEngine::getInterface($_SESSION['contract']['address']);
+            break;
+        }
+    }
+    header("location: ".$_SERVER['REQUEST_URI']);
+    exit;
+}
+
 if(isset($_POST['get_source'])) {
 	$code = $_SESSION['contract']['code'];
-    $code1=base64_decode($code);
-    $data=json_decode($code1, true);
-    $code=base64_decode($data['code']);
+    $code=base64_decode($code);
 	$phar_file = ROOT . "/tmp/".uniqid().".phar";
 	file_put_contents($phar_file, $code);
 
@@ -400,27 +423,31 @@ if(isset($_POST['get_source'])) {
 if(isset($_POST['exec_method'])) {
 	$address = $_POST['address'];
 	$fn_address = $_POST['fn_address'];
-	$sc_address = $_POST['sc_address'];
+    $amount = $_POST['amount'];
+    $method_type=$_POST['method_type'];
 
-    if(empty($fn_address)) {
-        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Address must be specified: '.$err]];
+    $_SESSION['fn_address']=$fn_address;
+    $_SESSION['amount']=$amount;
+    $_SESSION['method_type']=$method_type;
+
+    if(empty($method_type)) {
+        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Method type not selected']];
         header("location: ".$_SERVER['REQUEST_URI']);
         exit;
     }
 
-    if($fn_address === $sc_address) {
-        $type=TX_TYPE_SC_SEND;
-        $public_key = $virtual ? $_SESSION['sc_account']['public_key'] : api_get("/api.php?q=getPublicKey&address=$sc_address");
-        $src=$sc_address;
-        $dst=$address;
-    } else {
+    if($method_type == "exec") {
         $type=TX_TYPE_SC_EXEC;
-        $public_key = $virtual ? $_SESSION['account']['public_key'] : api_get("/api.php?q=getPublicKey&address=$address");
+        $public_key = $_SESSION['account']['public_key'];
         $src=$address;
         $dst=$fn_address;
+    } else {
+        $type=TX_TYPE_SC_SEND;
+        $public_key = $virtual ? $_SESSION['sc_account']['public_key'] : api_get("/api.php?q=getPublicKey&address=".$_SESSION['contract']['address']);
+        $src=$sc_address;
+        $dst=$address;
     }
 
-    $amount = $_POST['amount'];
 	$call_method = array_keys($_POST['exec_method'])[0];
 
 	$date = $_POST['date'];
@@ -452,6 +479,46 @@ if(isset($_POST['exec_method'])) {
         $_SESSION['transactions'][]=$transaction->toArray();
 
 	} else {
+
+        $params = [];
+        if(isset($_POST['params'][$call_method])) {
+            $post_params = $_POST['params'][$call_method];
+            $post_params = explode(",", $post_params);
+            foreach($post_params as &$item) {
+                $item = trim($item);
+                if(strlen($item)>0) {
+                    $params[]=$item;
+                }
+            }
+        }
+
+        $data = [
+            "method" => $call_method,
+            "params" => $params
+        ];
+        
+        $msg=base64_encode(json_encode($data));
+
+        $request_code = uniqid();
+        $_SESSION['auth_request_code']=$request_code;
+        $redirect = urlencode("/atheos/?");
+        $tx = [
+            "src"=>$src,
+            "dst"=>$dst,
+            "val"=>$amount,
+            "msg"=>$msg,
+            "fee"=>TX_SC_EXEC_FEE,
+            "type" => $type,
+            "date"=>time()
+        ];
+        $_SESSION['tx']=$tx;
+        $tx = base64_encode(json_encode($tx));
+        $request_code = uniqid("signtx");
+        $_SESSION['request_code']=$request_code;
+
+        $url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/approve.php?&app=Faucet&request_code=$request_code&tx=$tx&redirect=$redirect";
+        header("location: $url");
+        exit;
 
 		$res = api_post("/api.php?q=send",
 			array("dst" => $sc_address, "val" => $amount, "signature" => $signature,
@@ -612,11 +679,15 @@ if($virtual) {
 
 $address = "";
 $balance = 0;
+$deployedContracts=[];
 if(isset($_SESSION['account'])) {
 	$address = $_SESSION['account']['address'];
 	$balance = $virtual ? $_SESSION['accounts'][$address]['balance'] ?? 0 : api_get("/api.php?q=getBalance&address=$address");
 	$public_key = $virtual ? $_SESSION['account']['public_key'] : api_get("/api.php?q=getPublicKey&address=$address");
 	$private_key = $virtual ? $_SESSION['account']['private_key'] : null;
+    if(!$virtual) {
+        $deployedContracts = api_get("/api.php?q=getDeployedSmartContracts&address=$address");
+    }
 }
 
 
@@ -624,9 +695,10 @@ $smartContract = false;
 $sc_address = null;
 $compiled_code = null;
 $sc_balance = 0;
-if(isset($_SESSION['sc_account'])) {
-	$sc_address = $_SESSION['sc_account']['address'];
-	$sc_balance = $virtual ? $_SESSION['accounts'][$sc_address]['balance'] ?? 0 : api_get( "/api.php?q=getBalence&address=$sc_address");
+if(isset($_SESSION['contract'])) {
+	$sc_address = $_SESSION['contract']['address'];
+	$sc_balance = $virtual ? $_SESSION['accounts'][$sc_address]['balance'] ?? 0 : api_get( "/api.php?q=getBalance&address=$sc_address");
+    $_SESSION['contract']['balance']=$sc_balance;
 }
 
 if(isset($_SESSION['contract'])) {
@@ -646,7 +718,6 @@ if($virtual) {
 	$smartContract = api_get("/api.php?q=getSmartContract&address=$sc_address");
     if($smartContract) {
         $interface = api_get("/api.php?q=getSmartContractInterface&address=$sc_address");
-        $interface = json_decode($interface, true);
 	    $compiled_code = $smartContract['code'];
     }
 }
@@ -755,88 +826,117 @@ $settings = @$_SESSION['settings'];
     <?php } ?>
 
 
-
     <hr/>
-    <div class="grid align-items-center grid-nogutter">
-        <div class="col-3">Source:</div>
-        <div class="col-9">
-            <div class="flex">
-                <select name="source" class="p-1">
-                    <option value="folder" <?php if(@$_SESSION['source']=="folder") { ?>selected="selected"<?php } ?>>Whole folder</option>
-                    <?php foreach($files as $file) { ?>
-                        <option value="file:<?php echo $file ?>" <?php if(@$_SESSION['source']=="file:$file") { ?>selected="selected"<?php } ?>><?php echo $file ?></option>
-                    <?php } ?>
-                </select>
-                <button type="submit" name="compile" class="p-1">Compile</button>
-            </div>
-        </div>
-    </div>
-	<?php if (!empty($compiled_code)) { ?>
+    <?php if (count($deployedContracts)>0) { ?>
+        Deployed contracts:
         <div class="grid align-items-center grid-nogutter">
-            <div class="col-3">
-                Compiled code:
-                <br/>
-                <button type="submit" name="get_source">Source</button>
-            </div>
-            <div class="col-9">
-                <textarea name="compiled_code" rows="3" cols="30" readonly="readonly"><?php echo $compiled_code ?></textarea>
-            </div>
-        </div>
-	<?php } ?>
-
-	<?php if (!empty($compiled_code)) { ?>
-        <hr/>
-        <h4><strong>Deploy contract</strong></h4>
-        <div class="grid align-items-center grid-nogutter">
-            <div class="col-3">Contract address:</div>
+            <div class="col-3">Contract:</div>
             <div class="col-9">
                 <div class="flex">
-                    <?php if($virtual) {?>
-                        <select name="sc_address" onchange="this.form.submit()">
-                            <?php foreach($_SESSION['accounts'] as $account) { ?>
-                                <option value="<?php echo $account['address'] ?>"
-                                        <?php if ($account['address']==$sc_address) { ?>selected="selected"<?php } ?>><?php echo $account['address'] ?></option>
-                            <?php } ?>
-                        </select>
-                    <?php }else {?>
-                        <input type="text" value="<?php echo $_SESSION['contract']['address'] ?>" class="p-1"
-                               name="sc_address" <?php if ($smartContract) { ?>readonly="readonly"<?php } ?>>
-                    <?php } ?>
+                    <select name="contract" class="p-1 w-auto">
+                        <option value="">Select...</option>
+                        <?php foreach($deployedContracts as $contract) { ?>
+                            <option value="<?php echo $contract['address'] ?>" <?php if ($contract['address']==@$_SESSION['contract']['address']) { ?>selected<?php } ?>><?php echo $contract['address'] ?></option>
+                        <?php } ?>
+                    </select>
+                    <button name="set_contract" class="p-1">Set contract</button>
                 </div>
             </div>
-            <div class="col-3">Balance:</div>
-            <div class="col-9"><?php echo num($sc_balance) ?></div>
-            <div class="col-3">Amount</div>
-            <div class="col-9">
-                <input type="text" name="deploy_amount" value="<?php echo $_SESSION['deploy_amount'] ?>" placeholder="Amount"/>
-            </div>
-            <div class="col-3">Parameters</div>
-            <div class="col-9">
-                <input type="text" name="deploy_params" value="<?php echo $_SESSION['deploy_params'] ?>" placeholder="Param1, Param2, ..."/>
-            </div>
-            <div class="col-3">Signature:</div>
-            <div class="col-9">
-                <?php //if (empty($_SESSION['contract']['signature'])) { ?>
-                    <button type="submit" name="sign_contract" class="p-1">Sign</button>
-                <?php //} else { ?>
-                    <input type="text" name="signature" value="<?php echo $_SESSION['contract']['signature'] ?>" readonly/>
-                <?php //} ?>
-                <br/>
-                <textarea name="signature_code"><?php echo @$_SESSION['contract']['signature_code'] ?></textarea>
-            </div>
-            <?php if (!empty($_SESSION['contract']['signature'])) { ?>
-                <div class="col-3"></div>
+            <?php if ($_SESSION['contract']['deployed']) { ?>
+                <div class="col-3">Height:</div>
+                <div class="col-9"><?php echo $_SESSION['contract']['height'] ?></div>
+                <div class="col-3">Code:</div>
                 <div class="col-9">
-                    <button type="submit" name="deploy" class="p-1">Deploy</button>
+                    <textarea readonly><?php echo $_SESSION['contract']['code'] ?></textarea>
+                </div>
+                <div class="col-3">Signature:</div>
+                <div class="col-9">
+                    <input type="text" value="<?php echo $_SESSION['contract']['signature'] ?>" readonly/>
                 </div>
             <?php } ?>
         </div>
-	<?php } ?>
+    <?php } ?>
 
+    <?php if(!@$_SESSION['contract']['deployed']) { ?>
+        <hr/>
+        New contract
+        <div class="grid align-items-center grid-nogutter">
+            <div class="col-3">Source:</div>
+            <div class="col-9">
+                <div class="flex">
+                    <select name="source" class="p-1">
+                        <option value="folder" <?php if(@$_SESSION['source']=="folder") { ?>selected="selected"<?php } ?>>Whole folder</option>
+                        <?php foreach($files as $file) { ?>
+                            <option value="file:<?php echo $file ?>" <?php if(@$_SESSION['source']=="file:$file") { ?>selected="selected"<?php } ?>><?php echo $file ?></option>
+                        <?php } ?>
+                    </select>
+                    <button type="submit" name="compile" class="p-1">Compile</button>
+                </div>
+            </div>
+        </div>
+        <?php if (!empty($compiled_code)) { ?>
+            <div class="grid align-items-center grid-nogutter">
+                <div class="col-3">
+                    Compiled code:
+                    <br/>
+                    <button type="submit" name="get_source">Source</button>
+                </div>
+                <div class="col-9">
+                    <textarea name="compiled_code" rows="3" cols="30" readonly="readonly"><?php echo $compiled_code ?></textarea>
+                </div>
+            </div>
+        <?php } ?>
+
+        <?php if (!empty($compiled_code)) { ?>
+            <hr/>
+            <h4><strong>Deploy contract</strong></h4>
+            <div class="grid align-items-center grid-nogutter">
+                <div class="col-3">Amount</div>
+                <div class="col-9">
+                    <input type="text" name="deploy_amount" value="<?php echo $_SESSION['deploy_amount'] ?>" placeholder="Amount"/>
+                </div>
+                <div class="col-3">Parameters</div>
+                <div class="col-9">
+                    <input type="text" name="deploy_params" value="<?php echo $_SESSION['deploy_params'] ?>" placeholder="Param1, Param2, ..."/>
+                </div>
+                <div class="col-3">Signature:</div>
+                <div class="col-9">
+                    <?php //if (empty($_SESSION['contract']['signature'])) { ?>
+                        <button type="submit" name="sign_contract" class="p-1">Sign</button>
+                    <?php //} else { ?>
+                        <input type="text" name="deploy_signature" value="<?php echo $_SESSION['contract']['signature'] ?>" readonly/>
+                    <?php //} ?>
+                </div>
+                <?php if (!empty($_SESSION['contract']['signature'])) { ?>
+                    <div class="col-3">Contract address:</div>
+                    <div class="col-9">
+                        <div class="flex">
+                            <?php if($virtual) {?>
+                                <select name="sc_address" onchange="this.form.submit()">
+                                    <?php foreach($_SESSION['accounts'] as $account) { ?>
+                                        <option value="<?php echo $account['address'] ?>" <?php if ($account['address']==$sc_address) { ?>selected="selected"<?php } ?>><?php echo $account['address'] ?></option>
+                                    <?php } ?>
+                                </select>
+                            <?php }else {?>
+                                <input type="text" value="<?php echo @$_SESSION['deploy_address'] ?>" class="p-1"
+                                       name="deploy_address" <?php if ($smartContract) { ?>readonly="readonly"<?php } ?>>
+                            <?php } ?>
+                        </div>
+                    </div>
+                    <div class="col-3"></div>
+                    <div class="col-9">
+                        <button type="submit" name="deploy" class="p-1">Deploy</button>
+                    </div>
+                <?php } ?>
+            </div>
+        <?php } ?>
+    <?php } ?>
     <hr/>
 
-	<?php if ($interface) { ?>
-            Contract <?php echo $smartContract['address'] ?>
+	<?php if (@$_SESSION['contract']['interface']) { ?>
+            Interface
+            <br/>Smart contract: <?php echo $_SESSION['contract']['address'] ?>
+            <br/>Balance: <?php echo $_SESSION['contract']['balance'] ?>
         <div class="grid">
             <div class="col text-center"><a href="#" style="color: #fff" onclick="showInterfaceTab('methods'); return false">Methods</a></div>
             <div class="col text-center"><a href="#" style="color: #fff" onclick="showInterfaceTab('views'); return false">Views</a></div>
@@ -844,18 +944,25 @@ $settings = @$_SESSION['settings'];
         </div>
 
         <div style="display: <?php if (!isset($_SESSION['interface_tab']) || $_SESSION['interface_tab']=="methods") { ?>block<?php } else { ?>none<?php } ?>" class="tab" name="methods">
-            <div class="grid grid-nogutter">
+            <div class="grid grid-nogutter row">
+                <div class="col-3">
+                    Type
+                </div>
+                <div class="col-9 px-2">
+                    <input type="radio" name="method_type" id="method_type_exec" value="exec" style="width: auto" <?php if (@$_SESSION['method_type']=="exec") { ?>checked<?php } ?>/> Exec
+                    <input type="radio" name="method_type" id="method_type_send" value="send" style="width: auto" <?php if (@$_SESSION['method_type']=="send") { ?>checked<?php } ?>/> Send
+                </div>
                 <div class="col-3">
                     Address
                 </div>
-                <div class="col-9  px-2">
-                    <input type="text" value="" class="p-1" name="fn_address" placeholder="Address"/>
+                <div class="col-9 px-2">
+                    <input type="text" value="<?php echo @$_SESSION['fn_address'] ?>" class="p-1" name="fn_address" placeholder="Address"/>
                 </div>
                 <div class="col-3">
                     Amount
                 </div>
                 <div class="col-9  px-2">
-                    <input type="text" value="" class="p-1" name="amount" placeholder="Amount"/>
+                    <input type="text" value="<?php echo @$_SESSION['amount'] ?>" class="p-1" name="amount" placeholder="Amount"/>
                 </div>
             </div>
 	        <?php if(is_array(@$interface['methods'])) { foreach (@$interface['methods'] as $method) { ?>
@@ -927,6 +1034,7 @@ $settings = @$_SESSION['settings'];
 
     <?php } ?>
 
+        <hr/>
     <div class="mt-3">
         Transactions
         <div style="overflow-x: auto; scrollbar-color: auto; scrollbar-width: auto;">

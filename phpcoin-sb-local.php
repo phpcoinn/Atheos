@@ -231,7 +231,7 @@ if(isset($_POST['deploy'])) {
 
     $_SESSION['deploy_address']=$deploy_address;
 
-    $smartContract = api_get("/api.php?getSmartContract&address=$deploy_address");
+    $smartContract = api_get("/api.php?q=getSmartContract&address=$deploy_address");
 	if($smartContract && !$virtual) {
 		$_SESSION['msg']=[['icon'=>'error', 'text'=>'Smart contract with address already exists']];
 		header("location: ".$_SERVER['REQUEST_URI']);
@@ -441,11 +441,17 @@ if(isset($_POST['exec_method'])) {
         $public_key = $_SESSION['account']['public_key'];
         $src=$address;
         $dst=$fn_address;
-    } else {
+    } else if ($method_type == "send") {
+        $smartContract = api_get("/api.php?q=getSmartContract&address=".$_SESSION['account']['address']);
+        if(!$smartContract) {
+            $_SESSION['msg']=[['icon'=>'error', 'text'=>'Method connect smart contract wallet for call send method']];
+            header("location: ".$_SERVER['REQUEST_URI']);
+            exit;
+        }
         $type=TX_TYPE_SC_SEND;
-        $public_key = $virtual ? $_SESSION['sc_account']['public_key'] : api_get("/api.php?q=getPublicKey&address=".$_SESSION['contract']['address']);
-        $src=$sc_address;
-        $dst=$address;
+        $public_key = $_SESSION['account']['public_key'];
+        $src=$_SESSION['account']['address'];
+        $dst=$fn_address;
     }
 
 	$call_method = array_keys($_POST['exec_method'])[0];
@@ -688,6 +694,12 @@ if(isset($_SESSION['account'])) {
     if(!$virtual) {
         $deployedContracts = api_get("/api.php?q=getDeployedSmartContracts&address=$address");
     }
+    $debug="&".XDEBUG;
+    $smartContract = api_get("/api.php?q=getSmartContract&address=".$_SESSION['account']['address'].$debug);
+    if($smartContract) {
+        $_SESSION['contract']=$smartContract;
+        $_SESSION['contract']['deployed']=true;
+    }
 }
 
 
@@ -705,22 +717,18 @@ if(isset($_SESSION['contract'])) {
     $smartContract = $_SESSION['contract'];
     $code = $smartContract['code'];
     $compiled_code = $code;
-}
-
-$interface = false;
-if($virtual) {
-	SmartContractEngine::$virtual = true;
-	SmartContractEngine::$smartContract = @$_SESSION['contract'];
-	if(isset($_SESSION['contract']['interface'])) {
-		$interface = $_SESSION['contract']['interface'];
-	}
-} else {
-	$smartContract = api_get("/api.php?q=getSmartContract&address=$sc_address");
-    if($smartContract) {
-        $interface = api_get("/api.php?q=getSmartContractInterface&address=$sc_address");
-	    $compiled_code = $smartContract['code'];
+    $interface = false;
+    if($virtual) {
+        SmartContractEngine::$virtual = true;
+        SmartContractEngine::$smartContract = @$_SESSION['contract'];
+        if(isset($_SESSION['contract']['interface'])) {
+            $interface = $_SESSION['contract']['interface'];
+        }
+    } else {
+        $_SESSION['contract']['interface'] = api_get("/api.php?q=getSmartContractInterface&address=".$_SESSION['contract']['address']);
     }
 }
+
 
 
 $transactions = [];
@@ -957,7 +965,16 @@ $settings = @$_SESSION['settings'];
                 </div>
                 <div class="col-9 px-2">
                     <input type="text" value="<?php echo @$_SESSION['fn_address'] ?>" class="p-1" name="fn_address" placeholder="Address"/>
+                    <?php
+                    if(!empty($_SESSION['fn_address'])) {
+                        $fn_address_balance = api_get( "/api.php?q=getBalance&address=".$_SESSION['fn_address']);
+                    }
+                    ?>
                 </div>
+                <div class="col-3">
+                    Balance
+                </div>
+                <div class="col-9  px-2"><?php echo $fn_address_balance; ?></div>
                 <div class="col-3">
                     Amount
                 </div>
@@ -965,7 +982,8 @@ $settings = @$_SESSION['settings'];
                     <input type="text" value="<?php echo @$_SESSION['amount'] ?>" class="p-1" name="amount" placeholder="Amount"/>
                 </div>
             </div>
-	        <?php if(is_array(@$interface['methods'])) { foreach (@$interface['methods'] as $method) { ?>
+	        <?php if(is_array($_SESSION['contract']['interface']['methods'])) {
+                foreach ($_SESSION['contract']['interface']['methods'] as $method) { ?>
                 <div class="grid grid-nogutter">
                     <div class="col-3">
                         <button type="submit" class="p-1 w-full" data-call="<?php echo $method['name'] ?>" name="exec_method[<?php echo $method['name'] ?>]"><?php echo $method['name'] ?></button>
@@ -981,7 +999,8 @@ $settings = @$_SESSION['settings'];
 
 
         <div style="display: <?php if (@$_SESSION['interface_tab']=="views") { ?>block<?php } else { ?>none<?php } ?>" class="tab" name="views">
-	        <?php if(is_array(@$interface['views'])) { foreach (@$interface['views'] as $method) {
+	        <?php if(is_array($_SESSION['contract']['interface']['views'])) {
+                foreach ($_SESSION['contract']['interface']['views'] as $method) {
 		        $name = $method['name'];
 		        ?>
                 <div class="grid grid-nogutter">
@@ -1004,7 +1023,8 @@ $settings = @$_SESSION['settings'];
         </div>
 
         <div style="display: <?php if (@$_SESSION['interface_tab']=="properties") { ?>block<?php } else { ?>none<?php } ?>" class="tab" name="properties">
-	        <?php if(is_array(@$interface['properties'])) { foreach (@$interface['properties'] as $property) {
+	        <?php if(is_array($_SESSION['contract']['interface']['properties'])) {
+                foreach ($_SESSION['contract']['interface']['properties'] as $property) {
 		        $name = $property['name'];
 		        $type = @$property['type'];
 		        ?>

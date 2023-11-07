@@ -550,28 +550,26 @@ if(isset($_POST['exec_method'])) {
 
 if(isset($_POST['call_method'])) {
 	$account = $_POST['address'];
-	$sc_address = $_POST['sc_address'];
-	$compiled_code = $_POST['compiled_code'];
+    $sc_address = $_SESSION['contract']['address'];
 	$call_method = array_keys($_POST['call_method'])[0];
-	$msg = $_POST['msg'];
 
     $params = [];
     if(isset($_POST['params'][$call_method])) {
-        $params = $_POST['params'][$call_method];
-        $params = explode(",", $params);
-        foreach($params as &$item) {
+        $call_method_params = explode(",", $_POST['params'][$call_method]);
+        foreach($call_method_params as &$item) {
             $item = trim($item);
+            if(strlen($item)>0) {
+                $params[]=$item;
+            }
         }
     }
 	if($virtual) {
 		SmartContractEngine::$virtual = true;
 		SmartContractEngine::$smartContract = $_SESSION['contract'];
 	    $res = SmartContractEngine::call($sc_address, $call_method, $params, $err);
-		if(!$err) {
-			$_SESSION['accounts'][$account]['balance'] =- TX_SC_EXEC_FEE;
-		}
 	} else {
 		$params = base64_encode(json_encode($params));
+        $sc_address = $_SESSION['contract']['address'];
         $res = api_get("/api.php?q=getSmartContractView&address=$sc_address&method=$call_method&params=$params");
     }
 	if($err) {
@@ -587,7 +585,7 @@ if(isset($_POST['call_method'])) {
 
 if(isset($_POST['get_property_val'])) {
 	$property = array_keys($_POST['get_property_val'])[0];
-	$sc_address = $_POST['sc_address'];
+	$sc_address = $_SESSION['contract']['address'];
 	$mapkey = null;
 	if(isset($_POST['property_key'][$property])) {
 		$mapkey = $_POST['property_key'][$property];

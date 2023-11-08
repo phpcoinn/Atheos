@@ -429,6 +429,9 @@ if(isset($_POST['exec_method'])) {
     $_SESSION['fn_address']=$fn_address;
     $_SESSION['amount']=$amount;
     $_SESSION['method_type']=$method_type;
+    $_SESSION['interface_tab']="methods";
+
+    if(strlen($amount)==0) $amount=0;
 
     if(empty($method_type)) {
         $_SESSION['msg']=[['icon'=>'error', 'text'=>'Method type not selected']];
@@ -741,7 +744,7 @@ if($virtual) {
     }
 }
 
-$folder = SESSION("projectPath");
+$folder = WORKSPACE . "/" . session_id();
 $cmd = "find $folder -type f -name '*.php'";
 $output = Common::execute($cmd);
 $output = $output["text"];
@@ -925,7 +928,7 @@ $settings = @$_SESSION['settings'];
                                 </select>
                             <?php }else {?>
                                 <input type="text" value="<?php echo @$_SESSION['deploy_address'] ?>" class="p-1"
-                                       name="deploy_address" <?php if ($smartContract) { ?>readonly="readonly"<?php } ?>>
+                                       name="deploy_address">
                             <?php } ?>
                         </div>
                     </div>

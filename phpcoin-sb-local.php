@@ -184,6 +184,7 @@ if(isset($_POST['sign_contract'])) {
     ];
 
     $text = base64_encode(json_encode($data));
+    $_SESSION['contract']['compiled']=$text;
 
     if($virtual) {
         $_SESSION['contract']['signature']=ec_sign($text, $_SESSION['account']['private_key']);
@@ -246,22 +247,14 @@ if(isset($_POST['deploy'])) {
 
     $public_key = $_SESSION['account']['public_key'];
 
-	$signature = $_POST['deploy_signature'];
-	$msg = $signature;
-	$date = $_POST['date'];
-	$compiled_code = $_POST['compiled_code'];
-    $amount=$_POST['deploy_amount'];
-    if(empty($amount)) $amount=0;
+	$compiled = $_SESSION['contract']['compiled'];
+    $data=json_decode(base64_decode($compiled), true);
+	$compiled_code = $data['code'];
+    $amount=$data['amount'];
+    $deploy_params=$data['params'];
 
-    $_SESSION['deploy_params']=$_POST['deploy_params'];
-    $post_deploy_params = $_POST['deploy_params'];
-    $arr=explode(",",$post_deploy_params);
-    $deploy_params = [];
-    foreach ($arr as $item) {
-        $item = trim($item);
-        if(strlen($item) == 0) continue;
-        $deploy_params[]=$item;
-    }
+	$msg = $_SESSION['contract']['signature'];
+	$date = time();
 
     $data = [
         "code"=>$compiled_code,
@@ -300,7 +293,6 @@ if(isset($_POST['deploy'])) {
         $_SESSION['contract']['address']=$deploy_address;
         $_SESSION['contract']['height']=1;
         $_SESSION['contract']['code']=$txdata;
-        $_SESSION['contract']['signature']=$signature;
         $_SESSION['contract']['interface']=$interface;
 
 		header("location: ".$_SERVER['REQUEST_URI']);
@@ -346,32 +338,7 @@ if(isset($_POST['deploy'])) {
         </body>
         </html>';
 
-
         exit;
-
-
-		$url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/approve.php?&app=Faucet&request_code=$request_code&tx=$tx&redirect=$redirect";
-		header("location: $url");
-		exit;
-
-
-		$res = api_post("/api.php?q=send",
-			array("dst" => $sc_address, "val" => 0, "signature" => $signature,
-				"public_key" => $public_key, "type" => TX_TYPE_SC_CREATE,
-				"message" => $msg, "date" => $date, "fee" => $transaction->fee, "data" => $transaction->data));
-
-
-		$hash = $res['data'];
-		if(!$hash) {
-			$_SESSION['msg']=[['icon'=>'error', 'text'=>'Transaction can not be sent: '.$res['error']]];
-			header("location: ".$_SERVER['REQUEST_URI']);
-			exit;
-		} else {
-		    $_SESSION['deploy_tx']=$hash;
-			$_SESSION['msg']=[['icon'=>'success', 'text'=>'Transaction sent! Id of transaction: '.$hash]];
-			header("location: ".$_SERVER['REQUEST_URI']);
-			exit;
-		}
 	}
 
 }
@@ -381,13 +348,6 @@ if(isset($_POST['save'])) {
     $engine = $_POST['engine'];
 	$_SESSION['engine'] = $engine;
     $virtual = $engine == "virtual";
-    if(!$virtual) {
-//        unset($_SESSION['account']);
-//        unset($_SESSION['sc_account']);
-//	    $_SESSION['account']['address'] = $_POST['address'];
-//	    $_SESSION['account']['private_key'] = $_POST['private_key'];
-//	    $_SESSION['sc_account']['address'] = $_POST['sc_address'];
-    }
 	header("location: ".$_SERVER['REQUEST_URI']);
 	exit;
 }
@@ -473,12 +433,6 @@ if(isset($_POST['exec_method'])) {
 
 	$exec_method = array_keys($_POST['exec_method'])[0];
 
-	$date = $_POST['date'];
-	$msg = $_POST['msg'];
-	$signature = $_POST['signature'];
-	$transaction = new Transaction($public_key,$dst,$amount,$type,$date, $msg, TX_SC_EXEC_FEE);
-	$transaction->signature = $signature;
-
     $params = [];
     if(isset($_POST['params'][$exec_method])) {
         $post_params = $_POST['params'][$exec_method];
@@ -497,8 +451,9 @@ if(isset($_POST['exec_method'])) {
     ];
 
     $msg=base64_encode(json_encode($data));
-
 	if($virtual) {
+
+        $transaction = new Transaction($public_key,$dst,$amount,$type,time(), $msg, TX_SC_EXEC_FEE);
 		$hash = $transaction->hash();
 
 		SmartContractEngine::$virtual = true;
@@ -541,22 +496,6 @@ if(isset($_POST['exec_method'])) {
         $url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/approve.php?&app=Faucet&request_code=$request_code&tx=$tx&redirect=$redirect";
         header("location: $url");
         exit;
-
-		$res = api_post("/api.php?q=send",
-			array("dst" => $sc_address, "val" => $amount, "signature" => $signature,
-				"public_key" => $public_key, "type" => $transaction->type,
-				"message" => $msg, "date" => $date, "fee" => $transaction->fee, "data" => $transaction->data));
-
-		$hash = $res['data'];
-		if(!$hash) {
-			$_SESSION['msg']=[['icon'=>'error', 'text'=>'Transaction can not be sent: '.$res['error']]];
-			header("location: ".$_SERVER['REQUEST_URI']);
-			exit;
-		} else {
-			$_SESSION['msg']=[['icon'=>'success', 'text'=>'Transaction sent! Id of transaction: '.$hash]];
-			header("location: ".$_SERVER['REQUEST_URI']);
-			exit;
-		}
 	}
 
     $_SESSION['interface_tab']="methods";
@@ -686,7 +625,7 @@ if($virtual) {
 	    $_SESSION['accounts']= [];
         for($i=1;$i<=5;$i++) {
             $account = api_get( "/api.php?q=generateAccount");
-	        $account['balance'] =100;
+	        $account['balance'] =1000;
 	        $_SESSION['accounts'][$account['address']]=$account;
         }
 	    $_SESSION['account']=$_SESSION['accounts'][array_keys($_SESSION['accounts'])[0]];
@@ -915,11 +854,13 @@ $settings = @$_SESSION['settings'];
             <div class="grid align-items-center grid-nogutter">
                 <div class="col-3">Amount</div>
                 <div class="col-9">
-                    <input type="text" name="deploy_amount" value="<?php echo $_SESSION['deploy_amount'] ?>" placeholder="Amount"/>
+                    <input type="text" name="deploy_amount" value="<?php echo $_SESSION['contract']['deploy_amount'] ?>" placeholder="Amount"
+                    <?php if(!empty($_SESSION['contract']['signature'])) { ?>readonly<?php } ?>/>
                 </div>
                 <div class="col-3">Parameters</div>
                 <div class="col-9">
-                    <input type="text" name="deploy_params" value="<?php echo $_SESSION['deploy_params'] ?>" placeholder="Param1, Param2, ..."/>
+                    <input type="text" name="deploy_params" value="<?php echo $_SESSION['contract']['deploy_params'] ?>" placeholder="Param1, Param2, ..."
+                           <?php if(!empty($_SESSION['contract']['signature'])) { ?>readonly<?php } ?>/>
                 </div>
                 <div class="col-3">Signature:</div>
                 <div class="col-9">
@@ -1087,7 +1028,7 @@ $settings = @$_SESSION['settings'];
             <tbody>
             <?php foreach($transactions as $ix=>$tx) { ?>
                 <tr>
-                    <td><?php echo $virtual ? $ix : $tx['height'] ?></td>
+                    <td><?php echo $virtual ? $ix+1 : $tx['height'] ?></td>
                     <td><?php echo @$tx['src'] ?></td>
                     <td><?php echo $tx['dst'] ?></td>
                     <td><?php echo $tx['type'] ?></td>
@@ -1106,6 +1047,10 @@ $settings = @$_SESSION['settings'];
 
 
 </form>
+
+<div class="mt-3">
+    Smart contract state
+</div>
 
 <pre>
     <?php print_r(SmartContractEngine::getState($_SESSION['contract']['address'])) ?>

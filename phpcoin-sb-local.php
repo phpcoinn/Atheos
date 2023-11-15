@@ -93,7 +93,7 @@ if(isset($_GET['signature_data'])) {
     if(isset($signature_data['signature'])) {
         $_SESSION['contract']['signature']=$signature_data['signature'];
     }
-    header("location: /atheos");
+    header("location: /atheos?deploy=1");
     exit;
 }
 
@@ -153,7 +153,7 @@ function compile() {
     exit;
 }
 
-function sign_contract() {
+function sign_contract($virtual) {
     $request_code = uniqid();
     $_SESSION['request_code']=$request_code;
     $redirect = urlencode("/atheos/?");
@@ -243,8 +243,6 @@ function deploy($virtual) {
 
     $public_key = $_SESSION['account']['public_key'];
 
-    $signature = $_POST['deploy_signature'];
-    $msg = $signature;
     $date = $_POST['date'];
     $compiled_code = $_POST['compiled_code'];
     $amount=$_POST['deploy_amount'];
@@ -266,10 +264,43 @@ function deploy($virtual) {
         "params"=>$deploy_params
     ];
 
-    $txdata = base64_encode(json_encode($data));
-    $_SESSION['contract']['code']=$txdata;
-
     $_SESSION['deploy_amount']=$_POST['deploy_amount'];
+    $_SESSION['contract']['deploy_params']=$_POST['deploy_params'];
+
+    $txdata = base64_encode(json_encode($data));
+
+    if($virtual) {
+        $signature = ec_sign($txdata, $_SESSION['account']['private_key']);
+    } else if (empty($_SESSION['contract']['signature'])) {
+        $redirect = urlencode("/atheos/?");
+        $url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/sign.php?&app=Atheos&address=$address&redirect=$redirect&no_return_message=1";
+        echo '<!doctype html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport"
+                  content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="ie=edge">
+            <title>Document</title>
+        </head>
+        <body>
+            <form id="post_form" action="'.$url.'" method="post">
+                <input type="hidden" name="message" value="'.htmlentities($txdata).'"/>
+            </form>
+            <script type="text/javascript">
+                document.getElementById(\'post_form\').submit();
+            </script>
+        </body>
+        </html>';
+
+        exit;
+    } else {
+        $signature=$_SESSION['contract']['signature'];
+    }
+
+
+    $msg = $signature;
+    $_SESSION['contract']['code']=$txdata;
     $deploy_amount = floatval($_POST['deploy_amount']);
 
     $transaction = new Transaction($public_key,$deploy_address,$deploy_amount,TX_TYPE_SC_CREATE,$date, $msg, TX_SC_CREATE_FEE);
@@ -634,7 +665,7 @@ function download($virtual) {
 
 if(isset($_POST['reset'])) resetForm();
 if(isset($_POST['compile'])) compile();
-if(isset($_POST['sign_contract'])) sign_contract();
+if(isset($_POST['sign_contract'])) sign_contract($virtual);
 if(isset($_POST['deploy'])) deploy($virtual);
 if(isset($_POST['save'])) save();
 if(isset($_POST['set_contract'])) set_contract();
@@ -916,35 +947,35 @@ $settings = @$_SESSION['settings'];
                     <input type="text" name="deploy_params" value="<?php echo $_SESSION['contract']['deploy_params'] ?>" placeholder="Param1, Param2, ..."
                            <?php if(!empty($_SESSION['contract']['signature'])) { ?>readonly<?php } ?>/>
                 </div>
-                <div class="col-3">Signature:</div>
-                <div class="col-9">
-                    <?php //if (empty($_SESSION['contract']['signature'])) { ?>
-                        <button type="submit" name="sign_contract" class="p-1">Sign</button>
-                    <?php //} else { ?>
-                        <input type="text" name="deploy_signature" value="<?php echo $_SESSION['contract']['signature'] ?>" readonly/>
-                    <?php //} ?>
-                </div>
-                <?php if (!empty($_SESSION['contract']['signature'])) { ?>
-                    <div class="col-3">Contract address:</div>
+                <?php if(!empty($_SESSION['contract']['signature'])) { ?>
+                    <div class="col-3">Signature:</div>
                     <div class="col-9">
-                        <div class="flex">
-                            <?php if($virtual) {?>
-                                <select name="deploy_address">
-                                    <?php foreach($_SESSION['accounts'] as $account) { ?>
-                                        <option value="<?php echo $account['address'] ?>" <?php if ($account['address']==$_SESSION['deploy_address']) { ?>selected="selected"<?php } ?>><?php echo $account['address'] ?></option>
-                                    <?php } ?>
-                                </select>
-                            <?php }else {?>
-                                <input type="text" value="<?php echo @$_SESSION['deploy_address'] ?>" class="p-1"
-                                       name="deploy_address">
-                            <?php } ?>
-                        </div>
-                    </div>
-                    <div class="col-3"></div>
-                    <div class="col-9">
-                        <button type="submit" name="deploy" class="p-1">Deploy</button>
+                        <?php //if (empty($_SESSION['contract']['signature'])) { ?>
+    <!--                        <button type="submit" name="sign_contract" class="p-1">Sign</button>-->
+                        <?php //} else { ?>
+                            <input type="text" name="deploy_signature" value="<?php echo $_SESSION['contract']['signature'] ?>" readonly/>
+                        <?php //} ?>
                     </div>
                 <?php } ?>
+                <div class="col-3">Contract address:</div>
+                <div class="col-9">
+                    <div class="flex">
+                        <?php if($virtual) {?>
+                            <select name="deploy_address">
+                                <?php foreach($_SESSION['accounts'] as $account) { ?>
+                                    <option value="<?php echo $account['address'] ?>" <?php if ($account['address']==$_SESSION['deploy_address']) { ?>selected="selected"<?php } ?>><?php echo $account['address'] ?></option>
+                                <?php } ?>
+                            </select>
+                        <?php }else {?>
+                            <input type="text" value="<?php echo @$_SESSION['deploy_address'] ?>" class="p-1"
+                                   name="deploy_address">
+                        <?php } ?>
+                    </div>
+                </div>
+                <div class="col-3"></div>
+                <div class="col-9">
+                    <button type="submit" name="deploy" class="p-1">Deploy</button>
+                </div>
             </div>
         <?php } ?>
     <?php } ?>
@@ -1160,6 +1191,14 @@ $settings = @$_SESSION['settings'];
         $(".tab").hide();
         $(".tab[name="+name+"]").show();
     }
+
+    <?php if (!$virtual && isset($_GET['deploy'])) {
+        $d=1;
+        ?>
+    $(function() {
+        $("[name=deploy]").click();
+    });
+    <?php } ?>
 
 	    <?php if(isset($_SESSION['msg'])) { ?>
 	    <?php foreach ($_SESSION['msg'] as $msg) {

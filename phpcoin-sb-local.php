@@ -627,7 +627,7 @@ function wallet_auth() {
     $request_code = uniqid();
     $_SESSION['auth_request_code']=$request_code;
     $redirect = urlencode("/atheos/?");
-    $url=NODE_URL."/dapps.php?url=".MAIN_DAPPS_ID."/gateway/auth.php?app=Athoes&request_code=$request_code&redirect=$redirect";
+    $url=NODE_URL."/dapps.php?url=".MAIN_DAPPS_ID."/wallet/auth.php?app=Athoes&request_code=$request_code&redirect=$redirect";
     header("location: $url");
     exit;
 }
@@ -858,6 +858,9 @@ $settings = @$_SESSION['settings'];
             <div class="col-9">
                 <?php if (isset($_SESSION['account'])) { ?>
                     <?php echo $_SESSION['account']['address'] ?>
+                        <?php if (!empty($_SESSION['account']['account_name'])) { ?>
+                            (<?php echo $_SESSION['account']['account_name'] ?>)
+                        <?php } ?>
                     <input type="hidden" name="address" value="<?php echo $_SESSION['account']['address'] ?>"/>
                     <br/>
                     (<?php echo $balance ?>)

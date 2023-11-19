@@ -969,6 +969,7 @@ $settings = @$_SESSION['settings'];
                         <?php }else {?>
                             <input type="text" value="<?php echo @$_SESSION['deploy_address'] ?>" class="p-1"
                                    name="deploy_address">
+                            <button type="button" onclick="newContractAddress()">New</button>
                         <?php } ?>
                     </div>
                 </div>
@@ -1144,7 +1145,7 @@ $settings = @$_SESSION['settings'];
 <link rel="stylesheet" href="https://unpkg.com/primeflex@3.1.2/primeflex.css">
 
 <script src="<?php echo NODE_URL ?>/apps/common/js/jquery.min.js"></script>
-<script src="<?php echo NODE_URL ?>/apps/common/js/web-miner.js" type="text/javascript"></script>
+<script src="<?php echo NODE_URL ?>/apps/common/js/phpcoin-crypto.js" type="text/javascript"></script>
 <script type="text/javascript">
 
     function onSubmit(event) {
@@ -1190,6 +1191,13 @@ $settings = @$_SESSION['settings'];
     function showInterfaceTab(name) {
         $(".tab").hide();
         $(".tab[name="+name+"]").show();
+    }
+
+    function newContractAddress() {
+        let account = generateAccount();
+        console.log(account)
+        $("[name=deploy_address]").val(account.address)
+        localStorage.setItem("pk_"+account.address, account.privateKey)
     }
 
     <?php if (!$virtual && isset($_GET['deploy'])) {

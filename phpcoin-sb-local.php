@@ -226,6 +226,12 @@ function deploy($virtual) {
         exit;
     }
 
+    if($virtual && $deploy_address == $address) {
+        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Invalid contract address']];
+        header("location: ".$_SERVER['REQUEST_URI']);
+        exit;
+    }
+
     if(!Account::valid($deploy_address)) {
         $_SESSION['msg']=[['icon'=>'error', 'text'=>'Contract address is not valid']];
         header("location: ".$_SERVER['REQUEST_URI']);
@@ -266,6 +272,7 @@ function deploy($virtual) {
 
     $_SESSION['deploy_amount']=$_POST['deploy_amount'];
     $_SESSION['contract']['deploy_params']=$_POST['deploy_params'];
+    $_SESSION['contract']['address']=$deploy_address;
 
     $txdata = base64_encode(json_encode($data));
 
@@ -330,6 +337,7 @@ function deploy($virtual) {
         $_SESSION['contract']['code']=$txdata;
         $_SESSION['contract']['signature']=$signature;
         $_SESSION['contract']['interface']=$interface;
+        $_SESSION['contract']['deployed']=true;
 
         header("location: ".$_SERVER['REQUEST_URI']);
         exit;
@@ -471,6 +479,11 @@ function exec_method($virtual) {
             header("location: ".$_SERVER['REQUEST_URI']);
             exit;
         }
+        if($virtual && $dst == $src) {
+            $_SESSION['msg']=[['icon'=>'error', 'text'=>'Invalid destination address']];
+            header("location: ".$_SERVER['REQUEST_URI']);
+            exit;
+        }
     }
 
     $exec_method = array_keys($_POST['exec_method'])[0];
@@ -508,9 +521,9 @@ function exec_method($virtual) {
         SmartContractEngine::$smartContract = $_SESSION['contract'];
 
         if($type == TX_TYPE_SC_EXEC) {
-            $res = SmartContractEngine::exec($transaction, $exec_method, 0, $params, $err);
+            $res = SmartContractEngine::exec($transaction, $exec_method, count($_SESSION['transactions']), $params, $err);
         } else if ($type == TX_TYPE_SC_SEND) {
-            $res = SmartContractEngine::send($transaction, $exec_method, 0, $params, $err);
+            $res = SmartContractEngine::send($transaction, $exec_method, count($_SESSION['transactions']), $params, $err);
         }
         if(!$res) {
             $_SESSION['msg']=[['icon'=>'error', 'text'=>'Method can not be executed: '.$err]];
@@ -728,13 +741,12 @@ if(isset($_SESSION['account'])) {
 	$private_key = $virtual ? $_SESSION['account']['private_key'] : null;
     if(!$virtual) {
         $deployedContracts = api_get("/api.php?q=getDeployedSmartContracts&address=$address");
-    $debug="&".XDEBUG;
-    $smartContract = api_get("/api.php?q=getSmartContract&address=".$_SESSION['account']['address'].$debug);
-    if($smartContract) {
-        $_SESSION['contract']=$smartContract;
-        $_SESSION['contract']['deployed']=true;
+        $smartContract = api_get("/api.php?q=getSmartContract&address=".$_SESSION['account']['address']);
+        if($smartContract) {
+            $_SESSION['contract']=$smartContract;
+            $_SESSION['contract']['deployed']=true;
+        }
     }
-}
 }
 
 
@@ -906,20 +918,20 @@ $settings = @$_SESSION['settings'];
         </div>
     <?php } ?>
 
-    <?php if(!@$_SESSION['contract']['deployed']) { ?>
+    <?php if(!@$_SESSION['contract']['deployed'] || true) { ?>
         <hr/>
-        New contract
+        Contract source
         <div class="grid align-items-center grid-nogutter">
             <div class="col-3">Source:</div>
             <div class="col-9">
                 <div class="flex">
-                    <select name="source" class="p-1">
+                    <select name="source" class="p-1" <?php if (@$_SESSION['contract']['deployed']) { ?>disabled<?php } ?>>
                         <option value="folder" <?php if(@$_SESSION['source']=="folder") { ?>selected="selected"<?php } ?>>Whole folder</option>
                         <?php foreach($files as $file) { ?>
                             <option value="file:<?php echo $file ?>" <?php if(@$_SESSION['source']=="file:$file") { ?>selected="selected"<?php } ?>><?php echo $file ?></option>
                         <?php } ?>
                     </select>
-                    <button type="submit" name="compile" class="p-1">Compile</button>
+                    <button type="submit" name="compile" class="p-1" <?php if (@$_SESSION['contract']['deployed']) { ?>disabled<?php } ?>>Compile</button>
                 </div>
             </div>
         </div>
@@ -931,7 +943,7 @@ $settings = @$_SESSION['settings'];
                     <button type="submit" name="get_source">Source</button>
                 </div>
                 <div class="col-9">
-                    <textarea name="compiled_code" rows="3" cols="30" readonly="readonly"><?php echo $_SESSION['contract']['phar_code'] ?></textarea>
+                    <textarea name="compiled_code" rows="3" cols="30" readonly="readonly" <?php if (@$_SESSION['contract']['deployed']) { ?>disabled<?php } ?>><?php echo $_SESSION['contract']['phar_code'] ?></textarea>
                 </div>
             </div>
         <?php } ?>
@@ -964,7 +976,7 @@ $settings = @$_SESSION['settings'];
                 <div class="col-9">
                     <div class="flex">
                         <?php if($virtual) {?>
-                            <select name="deploy_address">
+                            <select name="deploy_address" <?php if ($_SESSION['contract']['deployed']) { ?>disabled<?php } ?>>
                                 <?php foreach($_SESSION['accounts'] as $account) { ?>
                                     <option value="<?php echo $account['address'] ?>" <?php if ($account['address']==$_SESSION['deploy_address']) { ?>selected="selected"<?php } ?>><?php echo $account['address'] ?></option>
                                 <?php } ?>
@@ -978,7 +990,7 @@ $settings = @$_SESSION['settings'];
                 </div>
                 <div class="col-3"></div>
                 <div class="col-9">
-                    <button type="submit" name="deploy" class="p-1">Deploy</button>
+                    <button type="submit" name="deploy" class="p-1" <?php if (@$_SESSION['contract']['deployed']) { ?>disabled<?php } ?>>Deploy</button>
                 </div>
             </div>
         <?php } ?>
@@ -986,13 +998,18 @@ $settings = @$_SESSION['settings'];
     <hr/>
 
 	<?php if (@$_SESSION['contract']['interface']) { ?>
-            Interface
-            <br/>Smart contract: <?php echo $_SESSION['contract']['address'] ?>
-            <br/>Balance: <?php echo $_SESSION['contract']['balance'] ?>
-        <div class="grid">
-            <div class="col text-center"><a href="#" style="color: #fff" onclick="showInterfaceTab('methods'); return false">Methods</a></div>
-            <div class="col text-center"><a href="#" style="color: #fff" onclick="showInterfaceTab('views'); return false">Views</a></div>
-            <div class="col text-center"><a href="#" style="color: #fff" onclick="showInterfaceTab('properties'); return false">Properties</a></div>
+            <div>
+        Interface
+        <br/>Smart contract: <?php echo $_SESSION['contract']['address'] ?>
+        <br/>Balance: <?php echo $_SESSION['contract']['balance'] ?>
+            </div>
+        <div class="grid if-tabs">
+            <div class="col text-center if-tab <?php if(@$_SESSION['interface_tab']=="methods") { ?>sel-tab<?php } ?>">
+                <a href="#" style="color: #ec7474" onclick="showInterfaceTab(this,'methods'); return false">Methods</a></div>
+            <div class="col text-center if-tab <?php if(@$_SESSION['interface_tab']=="views") { ?>sel-tab<?php } ?>">
+                <a href="#" style="color: #fff" onclick="showInterfaceTab(this,'views'); return false">Views</a></div>
+            <div class="col text-center if-tab <?php if(@$_SESSION['interface_tab']=="properties") { ?>sel-tab<?php } ?>">
+                <a href="#" style="color: #fff" onclick="showInterfaceTab(this,'properties'); return false">Properties</a></div>
         </div>
 
         <div style="display: <?php if (!isset($_SESSION['interface_tab']) || $_SESSION['interface_tab']=="methods") { ?>block<?php } else { ?>none<?php } ?>" class="tab" name="methods">
@@ -1131,17 +1148,17 @@ $settings = @$_SESSION['settings'];
         </table>
     </div>
     </div>
+    <?php
+        $state=SmartContractEngine::loadState($_SESSION['contract']['address']);
+        ?>
+    <div class="mt-3">
+            State:
+        <pre><?php print_r($state); ?></pre>
+    </div>
 	<input type="hidden" name="msg"/>
 	<input type="hidden" name="date"/>
 </form>
 
-<?php
-    $state=SmartContractEngine::loadState($_SESSION['contract']['address']);
-    ?>
-<div class="mt-3">
-        State:
-    <pre><?php print_r($state); ?></pre>
-</div>
 
 
 
@@ -1191,8 +1208,10 @@ $settings = @$_SESSION['settings'];
     }
 
 
-    function showInterfaceTab(name) {
+    function showInterfaceTab(el, name) {
         $(".tab").hide();
+        $(".if-tab").removeClass("sel-tab");
+        $(el).parent().addClass("sel-tab");
         $(".tab[name="+name+"]").show();
     }
 
@@ -1233,6 +1252,22 @@ $settings = @$_SESSION['settings'];
     #SBRIGHT {
         width: <?php echo $settings['sidebars.sb-right-width'] ?>;
         user-select: auto;
+    }
+    #SBRIGHT .if-tabs {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    #SBRIGHT .if-tabs .if-tab {
+        border-bottom: 1px solid #fff;
+        padding: 0;
+    }
+    #SBRIGHT .if-tabs .if-tab a {
+        margin: 0;
+        padding: 10px;
+    }
+    #SBRIGHT .if-tabs .if-tab.sel-tab {
+        border: 1px solid #fff;
+        border-bottom: none;
     }
 </style>
 

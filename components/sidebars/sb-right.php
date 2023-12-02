@@ -71,7 +71,7 @@ foreach ($plugins as $plugin) {
 
         <?php } else {
 
-            require_once "phpcoin-sb-local.php";
+            require_once "phpcoin-sb.php";
 
         } ?>
 

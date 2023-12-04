@@ -130,26 +130,26 @@ class ContextMenu {
 			"title" => "hr-git-folder",
 			"type" => "folder",
 		],
-		[
-			"title" => "codegit_open",
-			"icon" => "fas fa-code-branch",
-			"type" => "folder",
-			"isRepo" => true,
-			"action" => "atheos.codegit.showCodeGit"
-		],
-		[
-			"title" => "git_init",
-			"icon" => "fas fa-code-branch",
-			"type" => "folder",
-			"isRepo" => false,
-			"action" => "atheos.codegit.gitInit"
-		],
-		[
-			"title" => "git_clone",
-			"icon" => "fas fa-code-branch",
-			"type" => "folder",
-			"action" => "atheos.codegit.gitClone"
-		],
+//		[
+//			"title" => "codegit_open",
+//			"icon" => "fas fa-code-branch",
+//			"type" => "folder",
+//			"isRepo" => true,
+//			"action" => "atheos.codegit.showCodeGit"
+//		],
+//		[
+//			"title" => "git_init",
+//			"icon" => "fas fa-code-branch",
+//			"type" => "folder",
+//			"isRepo" => false,
+//			"action" => "atheos.codegit.gitInit"
+//		],
+//		[
+//			"title" => "git_clone",
+//			"icon" => "fas fa-code-branch",
+//			"type" => "folder",
+//			"action" => "atheos.codegit.gitClone"
+//		],
 		//////////////////////////////////////////////////////////////////////80
 		// Git File Actions
 		//////////////////////////////////////////////////////////////////////80

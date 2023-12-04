@@ -86,7 +86,7 @@
 			carbon.subscribe('filemanager.openDir', self.showRepoStatus);
 
 			//Repo updates
-			carbon.subscribe('chrono.mega', self.checkRepoStatus);
+			// carbon.subscribe('chrono.mega', self.checkRepoStatus);
 
 			carbon.subscribe('active.focus', function(path) {
 				self.checkFileStatus(path);

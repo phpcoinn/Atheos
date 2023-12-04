@@ -1,21 +1,25 @@
 <?php
 
 error_reporting(E_ALL^E_NOTICE);
-require_once '/home/marko/web/phpcoin/node/include/init.inc.php';
+require_once '/var/www/phpcoin/include/init.inc.php';
 
 $engines = [
 	"virtual" => [
 		"name" => "Virtual",
-        "NODE_URL" => "http://spectre:8000",
+        "NODE_URL" => "https://node1.phpcoin.net",
 	],
-	"local" => [
-		"name" => "Local",
-		"NODE_URL" => "http://spectre:8000",
-	],
-	"testnet" => [
-		"name" => "Testnet",
-		"NODE_URL" => "https://node1.phpcoin.net",
-	],
+//	"virtual" => [
+//		"name" => "Virtual",
+//        "NODE_URL" => "http://spectre:8000",
+//	],
+//	"local" => [
+//		"name" => "Local",
+//		"NODE_URL" => "http://spectre:8000",
+//	],
+//	"testnet" => [
+//		"name" => "Testnet",
+//		"NODE_URL" => "https://node1.phpcoin.net",
+//	],
 //	"testnet" => [
 //		"name"=>"Testnet"
 //    ],
@@ -126,11 +130,12 @@ function compile() {
     $phar_file = ROOT . "/tmp/sc/".uniqid().".phar";
 
     $source = $_POST['source'];
+    $folder = getProjectFolder();
     if($source == "folder") {
-        $file = WORKSPACE . "/" . session_id()."/index.php";
+        $file =$folder."/index.php";
     } else {
         $file = substr($source, 5);
-        $file = WORKSPACE . "/" . session_id().$file;
+        $file = $folder."/".$file;
     }
     $_SESSION['source']=$source;
 
@@ -676,6 +681,14 @@ function download($virtual) {
     exit();
 }
 
+function getProjectFolder() {
+    $folder = $_SESSION['projectPath'];
+    if(strpos($folder, WORKSPACE) === false) {
+        $folder = WORKSPACE . "/" . $folder;
+    }
+    return $folder;
+}
+
 if(isset($_POST['reset'])) resetForm();
 if(isset($_POST['compile'])) compile();
 if(isset($_POST['sign_contract'])) sign_contract($virtual);
@@ -720,7 +733,7 @@ if($virtual) {
 	    $_SESSION['accounts']= [];
         for($i=1;$i<=5;$i++) {
             $account = api_get( "/api.php?q=generateAccount");
-	        $account['balance'] =100;
+	        $account['balance'] =1000;
 	        $_SESSION['accounts'][$account['address']]=$account;
         }
 	    $_SESSION['account']=$_SESSION['accounts'][array_keys($_SESSION['accounts'])[0]];
@@ -790,7 +803,7 @@ if($virtual) {
     }
 }
 
-$folder = WORKSPACE . "/" . session_id();
+$folder = getProjectFolder();
 $cmd = "find $folder -type f -name '*.php'";
 $output = Common::execute($cmd);
 $output = $output["text"];
@@ -925,13 +938,13 @@ $settings = @$_SESSION['settings'];
             <div class="col-3">Source:</div>
             <div class="col-9">
                 <div class="flex">
-                    <select name="source" class="p-1" <?php if (@$_SESSION['contract']['deployed']) { ?>disabled<?php } ?>>
+                    <select name="source" class="p-1" <?php if (@$_SESSION['contract']['deployed'] && !$virtual) { ?>disabled<?php } ?>>
                         <option value="folder" <?php if(@$_SESSION['source']=="folder") { ?>selected="selected"<?php } ?>>Whole folder</option>
                         <?php foreach($files as $file) { ?>
                             <option value="file:<?php echo $file ?>" <?php if(@$_SESSION['source']=="file:$file") { ?>selected="selected"<?php } ?>><?php echo $file ?></option>
                         <?php } ?>
                     </select>
-                    <button type="submit" name="compile" class="p-1" <?php if (@$_SESSION['contract']['deployed']) { ?>disabled<?php } ?>>Compile</button>
+                    <button type="submit" name="compile" class="p-1" <?php if (@$_SESSION['contract']['deployed'] && !$virtual) { ?>disabled<?php } ?>>Compile</button>
                 </div>
             </div>
         </div>
@@ -1004,7 +1017,7 @@ $settings = @$_SESSION['settings'];
         <br/>Balance: <?php echo $_SESSION['contract']['balance'] ?>
             </div>
         <div class="grid if-tabs">
-            <div class="col text-center if-tab <?php if(@$_SESSION['interface_tab']=="methods") { ?>sel-tab<?php } ?>">
+            <div class="col text-center if-tab <?php if(!isset($_SESSION['interface_tab']) || @$_SESSION['interface_tab']=="methods") { ?>sel-tab<?php } ?>">
                 <a href="#" style="color: #ec7474" onclick="showInterfaceTab(this,'methods'); return false">Methods</a></div>
             <div class="col text-center if-tab <?php if(@$_SESSION['interface_tab']=="views") { ?>sel-tab<?php } ?>">
                 <a href="#" style="color: #fff" onclick="showInterfaceTab(this,'views'); return false">Views</a></div>
@@ -1018,7 +1031,7 @@ $settings = @$_SESSION['settings'];
                     Type
                 </div>
                 <div class="col-9 px-2">
-                    <input type="radio" name="method_type" id="method_type_exec" value="exec" style="width: auto" <?php if (@$_SESSION['method_type']=="exec") { ?>checked<?php } ?>/> Exec
+                    <input type="radio" name="method_type" id="method_type_exec" value="exec" style="width: auto" <?php if (!isset($_SESSION['method_type']) || @$_SESSION['method_type']=="exec") { ?>checked<?php } ?>/> Exec
                     <input type="radio" name="method_type" id="method_type_send" value="send" style="width: auto" <?php if (@$_SESSION['method_type']=="send") { ?>checked<?php } ?>/> Send
                 </div>
                 <div class="col-3">

@@ -93,7 +93,7 @@ if(isset($_GET['signature_data'])) {
     if(isset($signature_data['signature'])) {
         $_SESSION['contract']['signature']=$signature_data['signature'];
     }
-    header("location: /atheos");
+    header("location: /atheos?deploy=1");
     exit;
 }
 
@@ -102,27 +102,27 @@ if(isset($_GET['response'])) {
 
 }
 
-if(isset($_POST['reset'])) {
-	$_SESSION['account']=null;
-	$_SESSION['accounts']=[];
-	$_SESSION['contract']=null;
-	$_SESSION['sc_account']=null;
-	$_SESSION['transactions'] = [];
-	$_SESSION['property_key'] = null;
-	$_SESSION['get_property_val'] = null;
-	$_SESSION['view_method_val'] = null;
-	$_SESSION['engine'] = 'virtual';
-	$_SESSION['deploy_amount'] = null;
-	$_SESSION['deploy_params'] = null;
-	$projectName = "example";
-	$projectPath = session_id();
-	SESSION("projectPath", $projectPath);
-	SESSION("projectName", $projectName);
-	header("location: ". $_SERVER['REQUEST_URI']);
-	exit;
+function resetForm() {
+    $_SESSION['account']=null;
+    $_SESSION['accounts']=[];
+    $_SESSION['contract']=null;
+    $_SESSION['sc_account']=null;
+    $_SESSION['transactions'] = [];
+    $_SESSION['property_key'] = null;
+    $_SESSION['get_property_val'] = null;
+    $_SESSION['view_method_val'] = null;
+    $_SESSION['engine'] = 'virtual';
+    $_SESSION['deploy_amount'] = null;
+    $_SESSION['deploy_params'] = null;
+    $projectName = "example";
+    $projectPath = session_id();
+    SESSION("projectPath", $projectPath);
+    SESSION("projectName", $projectName);
+    header("location: ". $_SERVER['REQUEST_URI']);
+    exit;
 }
 
-if(isset($_POST['compile'])) {
+function compile() {
     $phar_file = ROOT . "/tmp/sc/".uniqid().".phar";
 
     $source = $_POST['source'];
@@ -137,14 +137,14 @@ if(isset($_POST['compile'])) {
     $_SESSION['contract']['phar_code']=null;
     $res = SmartContract::compile($file, $phar_file, $err);
     if(!$res) {
-        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Error compiling smart contract: '.$err]];
+        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Error compiling smart contract:'.$err]];
         header("location: ".$_SERVER['REQUEST_URI']);
         exit;
     }
     $code=base64_encode(file_get_contents($phar_file));
     $res = SmartContractEngine::verifyCode($code, $error);
     if(!$res) {
-        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Error verify smart contract: '.$error]];
+        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Error verify smart contract:'.$error]];
         header("location: ".$_SERVER['REQUEST_URI']);
         exit;
     }
@@ -153,9 +153,7 @@ if(isset($_POST['compile'])) {
     exit;
 }
 
-
-if(isset($_POST['sign_contract'])) {
-
+function sign_contract($virtual) {
     $request_code = uniqid();
     $_SESSION['request_code']=$request_code;
     $redirect = urlencode("/atheos/?");
@@ -184,7 +182,6 @@ if(isset($_POST['sign_contract'])) {
     ];
 
     $text = base64_encode(json_encode($data));
-    $_SESSION['contract']['compiled']=$text;
 
     if($virtual) {
         $_SESSION['contract']['signature']=ec_sign($text, $_SESSION['account']['private_key']);
@@ -215,20 +212,25 @@ if(isset($_POST['sign_contract'])) {
     exit;
 }
 
+function deploy($virtual) {
+    $address = $_SESSION['account']['address'];
+    if(empty($address)) {
+        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Wallet address is required']];
+        header("location: ".$_SERVER['REQUEST_URI']);
+        exit;
+    }
+    $deploy_address = $_POST['deploy_address'];
+    if(empty($deploy_address)) {
+        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Contract address is required']];
+        header("location: ".$_SERVER['REQUEST_URI']);
+        exit;
+    }
 
-if(isset($_POST['deploy'])) {
-	$address = $_SESSION['account']['address'];
-	if(empty($address)) {
-		$_SESSION['msg']=[['icon'=>'error', 'text'=>'Wallet address is required']];
-		header("location: ".$_SERVER['REQUEST_URI']);
-		exit;
-	}
-	$deploy_address = $_POST['deploy_address'];
-	if(empty($deploy_address)) {
-		$_SESSION['msg']=[['icon'=>'error', 'text'=>'Contract address is required']];
-		header("location: ".$_SERVER['REQUEST_URI']);
-		exit;
-	}
+    if($virtual && $deploy_address == $address) {
+        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Invalid contract address']];
+        header("location: ".$_SERVER['REQUEST_URI']);
+        exit;
+    }
 
     if(!Account::valid($deploy_address)) {
         $_SESSION['msg']=[['icon'=>'error', 'text'=>'Contract address is not valid']];
@@ -239,22 +241,28 @@ if(isset($_POST['deploy'])) {
     $_SESSION['deploy_address']=$deploy_address;
 
     $smartContract = api_get("/api.php?q=getSmartContract&address=$deploy_address");
-	if($smartContract && !$virtual) {
-		$_SESSION['msg']=[['icon'=>'error', 'text'=>'Smart contract with address already exists']];
-		header("location: ".$_SERVER['REQUEST_URI']);
-		exit;
-	}
+    if($smartContract && !$virtual) {
+        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Smart contract with address already exists']];
+        header("location: ".$_SERVER['REQUEST_URI']);
+        exit;
+    }
 
     $public_key = $_SESSION['account']['public_key'];
 
-	$compiled = $_SESSION['contract']['compiled'];
-    $data=json_decode(base64_decode($compiled), true);
-	$compiled_code = $data['code'];
-    $amount=$data['amount'];
-    $deploy_params=$data['params'];
+    $date = $_POST['date'];
+    $compiled_code = $_POST['compiled_code'];
+    $amount=$_POST['deploy_amount'];
+    if(empty($amount)) $amount=0;
 
-	$msg = $_SESSION['contract']['signature'];
-	$date = time();
+    $_SESSION['deploy_params']=$_POST['deploy_params'];
+    $post_deploy_params = $_POST['deploy_params'];
+    $arr=explode(",",$post_deploy_params);
+    $deploy_params = [];
+    foreach ($arr as $item) {
+        $item = trim($item);
+        if(strlen($item) == 0) continue;
+        $deploy_params[]=$item;
+    }
 
     $data = [
         "code"=>$compiled_code,
@@ -262,48 +270,84 @@ if(isset($_POST['deploy'])) {
         "params"=>$deploy_params
     ];
 
-    $txdata = base64_encode(json_encode($data));
-    $_SESSION['contract']['code']=$txdata;
-
     $_SESSION['deploy_amount']=$_POST['deploy_amount'];
+    $_SESSION['contract']['deploy_params']=$_POST['deploy_params'];
+    $_SESSION['contract']['address']=$deploy_address;
+
+    $txdata = base64_encode(json_encode($data));
+
+    if($virtual) {
+        $signature = ec_sign($txdata, $_SESSION['account']['private_key']);
+    } else if (empty($_SESSION['contract']['signature'])) {
+        $redirect = urlencode("/atheos/?");
+        $url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/sign.php?&app=Atheos&address=$address&redirect=$redirect&no_return_message=1";
+        echo '<!doctype html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport"
+                  content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+            <meta http-equiv="X-UA-Compatible" content="ie=edge">
+            <title>Document</title>
+        </head>
+        <body>
+            <form id="post_form" action="'.$url.'" method="post">
+                <input type="hidden" name="message" value="'.htmlentities($txdata).'"/>
+            </form>
+            <script type="text/javascript">
+                document.getElementById(\'post_form\').submit();
+            </script>
+        </body>
+        </html>';
+
+        exit;
+    } else {
+        $signature=$_SESSION['contract']['signature'];
+    }
+
+
+    $msg = $signature;
+    $_SESSION['contract']['code']=$txdata;
     $deploy_amount = floatval($_POST['deploy_amount']);
 
-	$transaction = new Transaction($public_key,$deploy_address,$deploy_amount,TX_TYPE_SC_CREATE,$date, $msg, TX_SC_CREATE_FEE);
-	$transaction->data = $txdata;
+    $transaction = new Transaction($public_key,$deploy_address,$deploy_amount,TX_TYPE_SC_CREATE,$date, $msg, TX_SC_CREATE_FEE);
+    $transaction->data = $txdata;
 
-	if($virtual) {
-		$hash = $transaction->hash();
+    if($virtual) {
+        $hash = $transaction->hash();
 
-		SmartContractEngine::$virtual = true;
-		SmartContractEngine::$smartContract = $_SESSION['contract'];
-		$res = SmartContractEngine::deploy($transaction, 0, $err);
+        SmartContractEngine::$virtual = true;
+        SmartContractEngine::$smartContract = $_SESSION['contract'];
+        $res = SmartContractEngine::deploy($transaction, 0, $err);
 
         if(!$res) {
-	        $_SESSION['msg']=[['icon'=>'error', 'text'=>'Smart contract not deployed: '.$err]];
-	        header("location: ".$_SERVER['REQUEST_URI']);
+            $_SESSION['msg']=[['icon'=>'error', 'text'=>'Smart contract not deployed: '.$err]];
+            header("location: ".$_SERVER['REQUEST_URI']);
             exit;
         } else {
             $_SESSION['transactions'][]=$transaction->toArray();
-	        $_SESSION['accounts'][$address]['balance']=$_SESSION['accounts'][$address]['balance'] - TX_SC_CREATE_FEE;
+            $_SESSION['accounts'][$address]['balance']=$_SESSION['accounts'][$address]['balance'] - TX_SC_CREATE_FEE;
             $_SESSION['accounts'][$deploy_address]['balance']+=$deploy_amount;
         }
 
-		$interface = SmartContractEngine::getInterface($deploy_address);
+        $interface = SmartContractEngine::getInterface($deploy_address);
 
         $_SESSION['contract']['address']=$deploy_address;
         $_SESSION['contract']['height']=1;
         $_SESSION['contract']['code']=$txdata;
+        $_SESSION['contract']['signature']=$signature;
         $_SESSION['contract']['interface']=$interface;
+        $_SESSION['contract']['deployed']=true;
 
-		header("location: ".$_SERVER['REQUEST_URI']);
+        header("location: ".$_SERVER['REQUEST_URI']);
         exit;
 
-	} else {
+    } else {
 
-		$request_code = uniqid();
-		$_SESSION['auth_request_code']=$request_code;
-		$redirect = urlencode("/atheos/?");
-		$tx = [
+        $request_code = uniqid();
+        $_SESSION['auth_request_code']=$request_code;
+        $redirect = urlencode("/atheos/?");
+        $tx = [
             "src"=>$transaction->src,
             "dst"=>$transaction->dst,
             "val"=>$transaction->val,
@@ -313,8 +357,8 @@ if(isset($_POST['deploy'])) {
             "date"=>$transaction->date
         ];
         $_SESSION['tx']=$tx;
-		$tx = base64_encode(json_encode($tx));
-		$request_code = uniqid("signtx");
+        $tx = base64_encode(json_encode($tx));
+        $request_code = uniqid("signtx");
         $_SESSION['request_code']=$request_code;
 
         $url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/approve.php?&app=Faucet&request_code=$request_code&&redirect=$redirect&tx=$tx";
@@ -338,21 +382,27 @@ if(isset($_POST['deploy'])) {
         </body>
         </html>';
 
+
         exit;
-	}
-
+    }
 }
 
-
-if(isset($_POST['save'])) {
+function save() {
     $engine = $_POST['engine'];
-	$_SESSION['engine'] = $engine;
+    $_SESSION['engine'] = $engine;
     $virtual = $engine == "virtual";
-	header("location: ".$_SERVER['REQUEST_URI']);
-	exit;
+    if(!$virtual) {
+//        unset($_SESSION['account']);
+//        unset($_SESSION['sc_account']);
+//	    $_SESSION['account']['address'] = $_POST['address'];
+//	    $_SESSION['account']['private_key'] = $_POST['private_key'];
+//	    $_SESSION['sc_account']['address'] = $_POST['sc_address'];
+    }
+    header("location: ".$_SERVER['REQUEST_URI']);
+    exit;
 }
 
-if(isset($_POST['set_contract'])) {
+function set_contract() {
     $contract = $_POST['contract'];
     $address = $_SESSION['account']['address'];
     $deployedContracts = api_get("/api.php?q=getDeployedSmartContracts&address=$address");
@@ -369,24 +419,24 @@ if(isset($_POST['set_contract'])) {
     exit;
 }
 
-if(isset($_POST['get_source'])) {
-	$code = $_SESSION['contract']['phar_code'];
+function get_source() {
+    $code = $_SESSION['contract']['phar_code'];
     $code=base64_decode($code);
-	$phar_file = ROOT . "/tmp/".uniqid().".phar";
-	file_put_contents($phar_file, $code);
+    $phar_file = ROOT . "/tmp/".uniqid().".phar";
+    file_put_contents($phar_file, $code);
 
     ob_end_clean();
-	header("Content-Description: File Transfer");
-	header("Content-Type: application/octet-stream");
-	header("Content-Disposition: attachment; filename=\"". basename($phar_file) ."\"");
+    header("Content-Description: File Transfer");
+    header("Content-Type: application/octet-stream");
+    header("Content-Disposition: attachment; filename=\"". basename($phar_file) ."\"");
 
-	readfile ($phar_file);
-	exit();
+    readfile ($phar_file);
+    exit();
 }
 
-if(isset($_POST['exec_method'])) {
-	$address = $_POST['address'];
-	$fn_address = $_POST['fn_address'];
+function exec_method($virtual) {
+    $address = $_POST['address'];
+    $fn_address = $_POST['fn_address'];
     $amount = $_POST['amount'];
     $method_type=$_POST['method_type'];
 
@@ -429,9 +479,21 @@ if(isset($_POST['exec_method'])) {
             header("location: ".$_SERVER['REQUEST_URI']);
             exit;
         }
+        if($virtual && $dst == $src) {
+            $_SESSION['msg']=[['icon'=>'error', 'text'=>'Invalid destination address']];
+            header("location: ".$_SERVER['REQUEST_URI']);
+            exit;
+        }
     }
 
-	$exec_method = array_keys($_POST['exec_method'])[0];
+    $exec_method = array_keys($_POST['exec_method'])[0];
+    $_SESSION['params'][$exec_method]=$_POST['params'][$exec_method];
+
+    $date = $_POST['date'];
+    $msg = $_POST['msg'];
+    $signature = $_POST['signature'];
+    $transaction = new Transaction($public_key,$dst,$amount,$type,$date, $msg, TX_SC_EXEC_FEE);
+    $transaction->signature = $signature;
 
     $params = [];
     if(isset($_POST['params'][$exec_method])) {
@@ -451,30 +513,29 @@ if(isset($_POST['exec_method'])) {
     ];
 
     $msg=base64_encode(json_encode($data));
-	if($virtual) {
 
-        $transaction = new Transaction($public_key,$dst,$amount,$type,time(), $msg, TX_SC_EXEC_FEE);
-		$hash = $transaction->hash();
+    if($virtual) {
+        $hash = $transaction->hash();
 
-		SmartContractEngine::$virtual = true;
-		SmartContractEngine::$smartContract = $_SESSION['contract'];
+        SmartContractEngine::$virtual = true;
+        SmartContractEngine::$smartContract = $_SESSION['contract'];
 
         if($type == TX_TYPE_SC_EXEC) {
-		    $res = SmartContractEngine::exec($transaction, $exec_method, 0, $params, $err);
+            $res = SmartContractEngine::exec($transaction, $exec_method, count($_SESSION['transactions']), $params, $err);
         } else if ($type == TX_TYPE_SC_SEND) {
-            $res = SmartContractEngine::send($transaction, $exec_method, 0, $params, $err);
+            $res = SmartContractEngine::send($transaction, $exec_method, count($_SESSION['transactions']), $params, $err);
         }
-		if(!$res) {
-			$_SESSION['msg']=[['icon'=>'error', 'text'=>'Method can not be executed: '.$err]];
-			header("location: ".$_SERVER['REQUEST_URI']);
-			exit;
-		}
+        if(!$res) {
+            $_SESSION['msg']=[['icon'=>'error', 'text'=>'Method can not be executed: '.$err]];
+            header("location: ".$_SERVER['REQUEST_URI']);
+            exit;
+        }
         $_SESSION['accounts'][$src]['balance'] = $_SESSION['accounts'][$src]['balance'] - (TX_SC_EXEC_FEE + $amount);
         $_SESSION['accounts'][$dst]['balance'] = $_SESSION['accounts'][$dst]['balance'] + $amount;
 
         $_SESSION['transactions'][]=$transaction->toArray();
 
-	} else {
+    } else {
 
         $request_code = uniqid();
         $_SESSION['auth_request_code']=$request_code;
@@ -496,17 +557,19 @@ if(isset($_POST['exec_method'])) {
         $url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/approve.php?&app=Faucet&request_code=$request_code&tx=$tx&redirect=$redirect";
         header("location: $url");
         exit;
-	}
+    }
 
     $_SESSION['interface_tab']="methods";
-	header("location: ".$_SERVER['REQUEST_URI']);
+    header("location: ".$_SERVER['REQUEST_URI']);
     exit;
 }
 
-if(isset($_POST['view_method'])) {
-	$account = $_POST['address'];
+function view_method($virtual) {
+    $account = $_POST['address'];
     $sc_address = $_SESSION['contract']['address'];
-	$view_method = array_keys($_POST['view_method'])[0];
+    $view_method = array_keys($_POST['view_method'])[0];
+
+    $_SESSION['interface_tab']="views";
 
     $params = [];
     if(isset($_POST['params'][$view_method])) {
@@ -518,84 +581,116 @@ if(isset($_POST['view_method'])) {
             }
         }
     }
-	if($virtual) {
-		SmartContractEngine::$virtual = true;
-		SmartContractEngine::$smartContract = $_SESSION['contract'];
-	    $res = SmartContractEngine::view($sc_address, $view_method, $params, $err);
-	} else {
-		$params = base64_encode(json_encode($params));
+    if($virtual) {
+        SmartContractEngine::$virtual = true;
+        SmartContractEngine::$smartContract = $_SESSION['contract'];
+        $res = SmartContractEngine::view($sc_address, $view_method, $params, $err);
+    } else {
+        $params = base64_encode(json_encode($params));
         $sc_address = $_SESSION['contract']['address'];
         $res = api_get("/api.php?q=getSmartContractView&address=$sc_address&method=$view_method&params=$params");
     }
-	if($err) {
-		$_SESSION['msg']=[['icon'=>'error', 'text'=>'View can not be executed: '.$err]];
-		header("location: ".$_SERVER['REQUEST_URI']);
-		exit;
-	}
-	$_SESSION['view_method_val'][$view_method]=$res;
-	$_SESSION['interface_tab']="views";
-	header("location: ".$_SERVER['REQUEST_URI']);
-	exit;
-}
-
-if(isset($_POST['get_property_val'])) {
-	$property = array_keys($_POST['get_property_val'])[0];
-	$sc_address = $_SESSION['contract']['address'];
-	$mapkey = null;
-	if(isset($_POST['property_key'][$property])) {
-		$mapkey = $_POST['property_key'][$property];
-		$_SESSION['property_key'][$property]=$mapkey;
-	}
-	if($virtual) {
-		SmartContractEngine::$virtual = true;
-		SmartContractEngine::$smartContract = $_SESSION['contract'];
-	    $val = SmartContractEngine::get($sc_address, $property, $mapkey);
-	} else {
-		$val = api_get("/api.php?q=getSmartContractProperty&address=$sc_address&property=$property&key=$mapkey");
+    if($err) {
+        $_SESSION['msg']=[['icon'=>'error', 'text'=>'View can not be executed: '.$err]];
+        header("location: ".$_SERVER['REQUEST_URI']);
+        exit;
     }
-	$_SESSION['get_property_val'][$property]=$val;
-	$_SESSION['interface_tab']="properties";
-	header("location: ".$_SERVER['REQUEST_URI']);
-	exit;
+    $_SESSION['view_method_val'][$view_method]=$res;
+    header("location: ".$_SERVER['REQUEST_URI']);
+    exit;
 }
 
-if(isset($_POST['clear_property_val'])) {
-	$property = array_keys($_POST['clear_property_val'])[0];
-	unset($_SESSION['get_property_val'][$property]);
-	unset($_SESSION['property_key'][$property]);
-	header("location: ".$_SERVER['REQUEST_URI']);
-	exit;
+function get_property_val($virtual) {
+    $property = array_keys($_POST['get_property_val'])[0];
+    $sc_address = $_SESSION['contract']['address'];
+    $mapkey = null;
+    if(isset($_POST['property_key'][$property])) {
+        $mapkey = $_POST['property_key'][$property];
+        $_SESSION['property_key'][$property]=$mapkey;
+    }
+    if($virtual) {
+        SmartContractEngine::$virtual = true;
+        SmartContractEngine::$smartContract = $_SESSION['contract'];
+        $val = SmartContractEngine::get($sc_address, $property, $mapkey);
+    } else {
+        $val = api_get("/api.php?q=getSmartContractProperty&address=$sc_address&property=$property&key=$mapkey");
+    }
+    $_SESSION['get_property_val'][$property]=$val;
+    $_SESSION['interface_tab']="properties";
+    header("location: ".$_SERVER['REQUEST_URI']);
+    exit;
 }
 
-if(isset($_POST['clear_view_method_val'])) {
-	$property = array_keys($_POST['clear_view_method_val'])[0];
-	unset($_SESSION['view_method_val'][$property]);
-	header("location: ".$_SERVER['REQUEST_URI']);
-	exit;
+function clear_property_val() {
+    $property = array_keys($_POST['clear_property_val'])[0];
+    unset($_SESSION['get_property_val'][$property]);
+    unset($_SESSION['property_key'][$property]);
+    header("location: ".$_SERVER['REQUEST_URI']);
+    exit;
 }
 
-
-if(isset($_POST['create_new_sc_address'])) {
-	$_SESSION['sc_account'] = api_get( "/api.php?q=generateAccount");
-	header("location: ". $_SERVER['REQUEST_URI']);
-	exit;
+function clear_view_method_val() {
+    $property = array_keys($_POST['clear_view_method_val'])[0];
+    unset($_SESSION['view_method_val'][$property]);
+    header("location: ".$_SERVER['REQUEST_URI']);
+    exit;
 }
 
-if(isset($_POST['wallet_auth'])) {
-	$request_code = uniqid();
-	$_SESSION['auth_request_code']=$request_code;
-	$redirect = urlencode("/atheos/?");
-	$url=NODE_URL."/dapps.php?url=".MAIN_DAPPS_ID."/gateway/auth.php?app=Athoes&request_code=$request_code&redirect=$redirect";
-	header("location: $url");
-	exit;
+function wallet_auth() {
+    $request_code = uniqid();
+    $_SESSION['auth_request_code']=$request_code;
+    $redirect = urlencode("/atheos/?");
+    $url=NODE_URL."/dapps.php?url=".MAIN_DAPPS_ID."/wallet/auth.php?app=Athoes&request_code=$request_code&redirect=$redirect";
+    header("location: $url");
+    exit;
 }
 
-if(isset($_POST['logout'])) {
-	unset($_SESSION['account']);
-	unset($_SESSION['accounts']);
-	header("location: ".$_SERVER['REQUEST_URI']);
-	exit;
+function logout() {
+    unset($_SESSION['account']);
+    unset($_SESSION['accounts']);
+    header("location: ".$_SERVER['REQUEST_URI']);
+    exit;
 }
+
+function download($virtual) {
+
+    $address=$_SESSION['contract']['address'];
+    if($virtual) {
+        $code=$_SESSION['contract']['code'];
+    } else {
+        $smartContract = api_get("/api.php?q=getSmartContract&address=".$address);
+        $code=$smartContract['code'];
+    }
+    $decoded=json_decode(base64_decode($code), true);
+    $code=base64_decode($decoded['code']);
+
+    $phar_file = ROOT . "/tmp/".$address.".phar";
+    file_put_contents($phar_file, $code);
+
+    ob_end_clean();
+    header("Content-Description: File Transfer");
+    header("Content-Type: application/octet-stream");
+    header("Content-Disposition: attachment; filename=\"". basename($phar_file) ."\"");
+
+    readfile ($phar_file);
+    exit();
+}
+
+if(isset($_POST['reset'])) resetForm();
+if(isset($_POST['compile'])) compile();
+if(isset($_POST['sign_contract'])) sign_contract($virtual);
+if(isset($_POST['deploy'])) deploy($virtual);
+if(isset($_POST['save'])) save();
+if(isset($_POST['set_contract'])) set_contract();
+if(isset($_POST['get_source'])) get_source();
+if(isset($_POST['exec_method'])) exec_method($virtual);
+if(isset($_POST['view_method'])) view_method($virtual);
+if(isset($_POST['get_property_val'])) get_property_val($virtual);
+if(isset($_POST['clear_property_val'])) clear_property_val();
+if(isset($_POST['clear_view_method_val'])) clear_view_method_val();
+if(isset($_POST['wallet_auth'])) wallet_auth();
+if(isset($_POST['logout'])) logout();
+if(isset($_POST['download'])) download($virtual);
 
 if(isset($_POST['address']) || isset($_POST['sc_address'])) {
 	foreach ($_SESSION['accounts'] as $account) {
@@ -625,7 +720,7 @@ if($virtual) {
 	    $_SESSION['accounts']= [];
         for($i=1;$i<=5;$i++) {
             $account = api_get( "/api.php?q=generateAccount");
-	        $account['balance'] =1000;
+	        $account['balance'] =100;
 	        $_SESSION['accounts'][$account['address']]=$account;
         }
 	    $_SESSION['account']=$_SESSION['accounts'][array_keys($_SESSION['accounts'])[0]];
@@ -646,8 +741,7 @@ if(isset($_SESSION['account'])) {
 	$private_key = $virtual ? $_SESSION['account']['private_key'] : null;
     if(!$virtual) {
         $deployedContracts = api_get("/api.php?q=getDeployedSmartContracts&address=$address");
-        $debug="&".XDEBUG;
-        $smartContract = api_get("/api.php?q=getSmartContract&address=".$_SESSION['account']['address'].$debug);
+        $smartContract = api_get("/api.php?q=getSmartContract&address=".$_SESSION['account']['address']);
         if($smartContract) {
             $_SESSION['contract']=$smartContract;
             $_SESSION['contract']['deployed']=true;
@@ -776,6 +870,9 @@ $settings = @$_SESSION['settings'];
             <div class="col-9">
                 <?php if (isset($_SESSION['account'])) { ?>
                     <?php echo $_SESSION['account']['address'] ?>
+                        <?php if (!empty($_SESSION['account']['account_name'])) { ?>
+                            (<?php echo $_SESSION['account']['account_name'] ?>)
+                        <?php } ?>
                     <input type="hidden" name="address" value="<?php echo $_SESSION['account']['address'] ?>"/>
                     <br/>
                     (<?php echo $balance ?>)
@@ -806,7 +903,10 @@ $settings = @$_SESSION['settings'];
             <?php if ($_SESSION['contract']['deployed']) { ?>
                 <div class="col-3">Height:</div>
                 <div class="col-9"><?php echo $_SESSION['contract']['height'] ?></div>
-                <div class="col-3">Code:</div>
+                <div class="col-3">
+                    Code:<br/>
+                    <button type="submit" name="download" class="p-1">Download</button>
+                </div>
                 <div class="col-9">
                     <textarea readonly><?php echo $_SESSION['contract']['code'] ?></textarea>
                 </div>
@@ -818,20 +918,20 @@ $settings = @$_SESSION['settings'];
         </div>
     <?php } ?>
 
-    <?php if(!@$_SESSION['contract']['deployed']) { ?>
+    <?php if(!@$_SESSION['contract']['deployed'] || true) { ?>
         <hr/>
-        New contract
+        Contract source
         <div class="grid align-items-center grid-nogutter">
             <div class="col-3">Source:</div>
             <div class="col-9">
                 <div class="flex">
-                    <select name="source" class="p-1">
+                    <select name="source" class="p-1" <?php if (@$_SESSION['contract']['deployed']) { ?>disabled<?php } ?>>
                         <option value="folder" <?php if(@$_SESSION['source']=="folder") { ?>selected="selected"<?php } ?>>Whole folder</option>
                         <?php foreach($files as $file) { ?>
                             <option value="file:<?php echo $file ?>" <?php if(@$_SESSION['source']=="file:$file") { ?>selected="selected"<?php } ?>><?php echo $file ?></option>
                         <?php } ?>
                     </select>
-                    <button type="submit" name="compile" class="p-1">Compile</button>
+                    <button type="submit" name="compile" class="p-1" <?php if (@$_SESSION['contract']['deployed']) { ?>disabled<?php } ?>>Compile</button>
                 </div>
             </div>
         </div>
@@ -843,7 +943,7 @@ $settings = @$_SESSION['settings'];
                     <button type="submit" name="get_source">Source</button>
                 </div>
                 <div class="col-9">
-                    <textarea name="compiled_code" rows="3" cols="30" readonly="readonly"><?php echo $_SESSION['contract']['phar_code'] ?></textarea>
+                    <textarea name="compiled_code" rows="3" cols="30" readonly="readonly" <?php if (@$_SESSION['contract']['deployed']) { ?>disabled<?php } ?>><?php echo $_SESSION['contract']['phar_code'] ?></textarea>
                 </div>
             </div>
         <?php } ?>
@@ -855,55 +955,61 @@ $settings = @$_SESSION['settings'];
                 <div class="col-3">Amount</div>
                 <div class="col-9">
                     <input type="text" name="deploy_amount" value="<?php echo $_SESSION['contract']['deploy_amount'] ?>" placeholder="Amount"
-                    <?php if(!empty($_SESSION['contract']['signature'])) { ?>readonly<?php } ?>/>
+                           <?php if(!empty($_SESSION['contract']['signature'])) { ?>readonly<?php } ?>/>
                 </div>
                 <div class="col-3">Parameters</div>
                 <div class="col-9">
                     <input type="text" name="deploy_params" value="<?php echo $_SESSION['contract']['deploy_params'] ?>" placeholder="Param1, Param2, ..."
                            <?php if(!empty($_SESSION['contract']['signature'])) { ?>readonly<?php } ?>/>
                 </div>
-                <div class="col-3">Signature:</div>
-                <div class="col-9">
-                    <?php //if (empty($_SESSION['contract']['signature'])) { ?>
-                        <button type="submit" name="sign_contract" class="p-1">Sign</button>
-                    <?php //} else { ?>
-                        <input type="text" name="deploy_signature" value="<?php echo $_SESSION['contract']['signature'] ?>" readonly/>
-                    <?php //} ?>
-                </div>
-                <?php if (!empty($_SESSION['contract']['signature'])) { ?>
-                    <div class="col-3">Contract address:</div>
+                <?php if(!empty($_SESSION['contract']['signature'])) { ?>
+                    <div class="col-3">Signature:</div>
                     <div class="col-9">
-                        <div class="flex">
-                            <?php if($virtual) {?>
-                                <select name="deploy_address">
-                                    <?php foreach($_SESSION['accounts'] as $account) { ?>
-                                        <option value="<?php echo $account['address'] ?>" <?php if ($account['address']==$_SESSION['deploy_address']) { ?>selected="selected"<?php } ?>><?php echo $account['address'] ?></option>
-                                    <?php } ?>
-                                </select>
-                            <?php }else {?>
-                                <input type="text" value="<?php echo @$_SESSION['deploy_address'] ?>" class="p-1"
-                                       name="deploy_address">
-                            <?php } ?>
-                        </div>
-                    </div>
-                    <div class="col-3"></div>
-                    <div class="col-9">
-                        <button type="submit" name="deploy" class="p-1">Deploy</button>
+                        <?php //if (empty($_SESSION['contract']['signature'])) { ?>
+    <!--                        <button type="submit" name="sign_contract" class="p-1">Sign</button>-->
+                        <?php //} else { ?>
+                            <input type="text" name="deploy_signature" value="<?php echo $_SESSION['contract']['signature'] ?>" readonly/>
+                        <?php //} ?>
                     </div>
                 <?php } ?>
+                <div class="col-3">Contract address:</div>
+                <div class="col-9">
+                    <div class="flex">
+                        <?php if($virtual) {?>
+                            <select name="deploy_address" <?php if ($_SESSION['contract']['deployed']) { ?>disabled<?php } ?>>
+                                <?php foreach($_SESSION['accounts'] as $account) { ?>
+                                    <option value="<?php echo $account['address'] ?>" <?php if ($account['address']==$_SESSION['deploy_address']) { ?>selected="selected"<?php } ?>><?php echo $account['address'] ?></option>
+                                <?php } ?>
+                            </select>
+                        <?php }else {?>
+                            <input type="text" value="<?php echo @$_SESSION['deploy_address'] ?>" class="p-1"
+                                   name="deploy_address">
+                            <button type="button" onclick="newContractAddress()">New</button>
+                        <?php } ?>
+                    </div>
+                </div>
+                <div class="col-3"></div>
+                <div class="col-9">
+                    <button type="submit" name="deploy" class="p-1" <?php if (@$_SESSION['contract']['deployed']) { ?>disabled<?php } ?>>Deploy</button>
+                </div>
             </div>
         <?php } ?>
     <?php } ?>
     <hr/>
 
 	<?php if (@$_SESSION['contract']['interface']) { ?>
-            Interface
-            <br/>Smart contract: <?php echo $_SESSION['contract']['address'] ?>
-            <br/>Balance: <?php echo $_SESSION['contract']['balance'] ?>
-        <div class="grid">
-            <div class="col text-center"><a href="#" style="color: #fff" onclick="showInterfaceTab('methods'); return false">Methods</a></div>
-            <div class="col text-center"><a href="#" style="color: #fff" onclick="showInterfaceTab('views'); return false">Views</a></div>
-            <div class="col text-center"><a href="#" style="color: #fff" onclick="showInterfaceTab('properties'); return false">Properties</a></div>
+            <div>
+        Interface
+        <br/>Smart contract: <?php echo $_SESSION['contract']['address'] ?>
+        <br/>Balance: <?php echo $_SESSION['contract']['balance'] ?>
+            </div>
+        <div class="grid if-tabs">
+            <div class="col text-center if-tab <?php if(@$_SESSION['interface_tab']=="methods") { ?>sel-tab<?php } ?>">
+                <a href="#" style="color: #ec7474" onclick="showInterfaceTab(this,'methods'); return false">Methods</a></div>
+            <div class="col text-center if-tab <?php if(@$_SESSION['interface_tab']=="views") { ?>sel-tab<?php } ?>">
+                <a href="#" style="color: #fff" onclick="showInterfaceTab(this,'views'); return false">Views</a></div>
+            <div class="col text-center if-tab <?php if(@$_SESSION['interface_tab']=="properties") { ?>sel-tab<?php } ?>">
+                <a href="#" style="color: #fff" onclick="showInterfaceTab(this,'properties'); return false">Properties</a></div>
         </div>
 
         <div style="display: <?php if (!isset($_SESSION['interface_tab']) || $_SESSION['interface_tab']=="methods") { ?>block<?php } else { ?>none<?php } ?>" class="tab" name="methods">
@@ -945,7 +1051,8 @@ $settings = @$_SESSION['settings'];
                     </div>
                     <div class="col-9  px-2">
                         <?php if (count($method['params']) > 0) { ?>
-                            <input type="text" value="" class="p-1" name="params[<?php echo $method['name'] ?>]" placeholder="<?php echo implode(",", $method['params']) ?>"/>
+                            <input type="text" value="<?php echo @$_SESSION['params'][$method['name']] ?>" class="p-1" name="params[<?php echo $method['name'] ?>]"
+                                   placeholder="<?php echo implode(",", $method['params']) ?>"/>
                         <?php } ?>
                     </div>
                 </div>
@@ -1028,7 +1135,7 @@ $settings = @$_SESSION['settings'];
             <tbody>
             <?php foreach($transactions as $ix=>$tx) { ?>
                 <tr>
-                    <td><?php echo $virtual ? $ix+1 : $tx['height'] ?></td>
+                    <td><?php echo $virtual ? $ix : $tx['height'] ?></td>
                     <td><?php echo @$tx['src'] ?></td>
                     <td><?php echo $tx['dst'] ?></td>
                     <td><?php echo $tx['type'] ?></td>
@@ -1041,25 +1148,24 @@ $settings = @$_SESSION['settings'];
         </table>
     </div>
     </div>
+    <?php
+        $state=SmartContractEngine::loadState($_SESSION['contract']['address']);
+        ?>
+    <div class="mt-3">
+            State:
+        <pre><?php print_r($state); ?></pre>
+    </div>
 	<input type="hidden" name="msg"/>
 	<input type="hidden" name="date"/>
-
-
-
 </form>
 
-<div class="mt-3">
-    Smart contract state
-</div>
 
-<pre>
-    <?php print_r(SmartContractEngine::getState($_SESSION['contract']['address'])) ?>
-</pre>
+
 
 <link rel="stylesheet" href="https://unpkg.com/primeflex@3.1.2/primeflex.css">
 
 <script src="<?php echo NODE_URL ?>/apps/common/js/jquery.min.js"></script>
-<script src="<?php echo NODE_URL ?>/apps/common/js/web-miner.js" type="text/javascript"></script>
+<script src="<?php echo NODE_URL ?>/apps/common/js/phpcoin-crypto.js" type="text/javascript"></script>
 <script type="text/javascript">
 
     function onSubmit(event) {
@@ -1102,10 +1208,27 @@ $settings = @$_SESSION['settings'];
     }
 
 
-    function showInterfaceTab(name) {
+    function showInterfaceTab(el, name) {
         $(".tab").hide();
+        $(".if-tab").removeClass("sel-tab");
+        $(el).parent().addClass("sel-tab");
         $(".tab[name="+name+"]").show();
     }
+
+    function newContractAddress() {
+        let account = generateAccount();
+        console.log(account)
+        $("[name=deploy_address]").val(account.address)
+        localStorage.setItem("pk_"+account.address, account.privateKey)
+    }
+
+    <?php if (!$virtual && isset($_GET['deploy'])) {
+        $d=1;
+        ?>
+    $(function() {
+        $("[name=deploy]").click();
+    });
+    <?php } ?>
 
 	    <?php if(isset($_SESSION['msg'])) { ?>
 	    <?php foreach ($_SESSION['msg'] as $msg) {
@@ -1129,6 +1252,22 @@ $settings = @$_SESSION['settings'];
     #SBRIGHT {
         width: <?php echo $settings['sidebars.sb-right-width'] ?>;
         user-select: auto;
+    }
+    #SBRIGHT .if-tabs {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    #SBRIGHT .if-tabs .if-tab {
+        border-bottom: 1px solid #fff;
+        padding: 0;
+    }
+    #SBRIGHT .if-tabs .if-tab a {
+        margin: 0;
+        padding: 10px;
+    }
+    #SBRIGHT .if-tabs .if-tab.sel-tab {
+        border: 1px solid #fff;
+        border-bottom: none;
     }
 </style>
 

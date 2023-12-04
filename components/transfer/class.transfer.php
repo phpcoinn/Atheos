@@ -86,6 +86,13 @@ class Transfer {
 			if (!empty($value)) {
 				$filename = $value;
 				$add = $path."/$filename";
+
+                $ext = pathinfo($filename, PATHINFO_EXTENSION);
+                if($ext=="phar") {
+                    $this->processPhar($_FILES["upload"]["tmp_name"][$key], $path, $filename, $add);
+                    return;
+                }
+
 				if (@move_uploaded_file($_FILES["upload"]["tmp_name"][$key], $add)) {
 					$info[] = array(
 						"name" => $value,
@@ -96,8 +103,19 @@ class Transfer {
 						"delete_type" => "DELETE"
 					);
 				}
+
 			}
 		}
 		Common::send("success", array("data" => $info));
 	}
+
+    function processPhar($src, $path, $filename, $add) {
+        move_uploaded_file($src, $add);
+        $phar = new Phar($add);
+        $folder = $path . "/" . Common::cleanPath(pathinfo($add, PATHINFO_FILENAME));
+        mkdir($folder);
+        $phar->extractTo($folder);
+        unlink($add);
+        Common::send("success", array("data" => []));
+    }
 }

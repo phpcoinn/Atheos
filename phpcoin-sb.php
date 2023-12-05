@@ -494,12 +494,6 @@ function exec_method($virtual) {
     $exec_method = array_keys($_POST['exec_method'])[0];
     $_SESSION['params'][$exec_method]=$_POST['params'][$exec_method];
 
-    $date = $_POST['date'];
-    $msg = $_POST['msg'];
-    $signature = $_POST['signature'];
-    $transaction = new Transaction($public_key,$dst,$amount,$type,$date, $msg, TX_SC_EXEC_FEE);
-    $transaction->signature = $signature;
-
     $params = [];
     if(isset($_POST['params'][$exec_method])) {
         $post_params = $_POST['params'][$exec_method];
@@ -520,6 +514,8 @@ function exec_method($virtual) {
     $msg=base64_encode(json_encode($data));
 
     if($virtual) {
+        $date = $_POST['date'];
+        $transaction = new Transaction($public_key,$dst,$amount,$type,$date, $msg, TX_SC_EXEC_FEE);
         $hash = $transaction->hash();
 
         SmartContractEngine::$virtual = true;
@@ -1046,10 +1042,6 @@ $settings = @$_SESSION['settings'];
                     ?>
                 </div>
                 <div class="col-3">
-                    Balance
-                </div>
-                <div class="col-9  px-2"><?php echo $fn_address_balance; ?></div>
-                <div class="col-3">
                     Amount
                 </div>
                 <div class="col-9  px-2">
@@ -1142,7 +1134,8 @@ $settings = @$_SESSION['settings'];
                 <th>Type</th>
                 <th>Value</th>
                 <th>Fee</th>
-                <th>Message</th>
+                <th>Method</th>
+                <th>Params</th>
             </tr>
             </thead>
             <tbody>
@@ -1151,10 +1144,35 @@ $settings = @$_SESSION['settings'];
                     <td><?php echo $virtual ? $ix : $tx['height'] ?></td>
                     <td><?php echo @$tx['src'] ?></td>
                     <td><?php echo $tx['dst'] ?></td>
-                    <td><?php echo $tx['type'] ?></td>
+                    <td><?php
+                        if($tx['type']==TX_TYPE_SC_CREATE) echo "Deploy";
+                        if($tx['type']==TX_TYPE_SC_EXEC) echo "Exec";
+                        if($tx['type']==TX_TYPE_SC_SEND) echo "Send";
+                        ?>
+                    </td>
                     <td><?php echo $tx['val'] ?></td>
                     <td><?php echo $tx['fee'] ?></td>
-                    <td><?php if($tx['type']!=5) echo base64_decode($tx['message']) ?></td>
+                    <td><?php
+                        if($tx['type']==TX_TYPE_SC_CREATE) {
+                            echo "deploy";
+                        }
+                        if($tx['type']==TX_TYPE_SC_EXEC || $tx['type']==TX_TYPE_SC_SEND) {
+                            $data = json_decode(base64_decode($tx['message']),true);
+                            echo $data['method'];
+                        }
+                        ?>
+                    </td>
+                    <td><?php
+                        if($tx['type']==TX_TYPE_SC_CREATE) {
+                            $data= json_decode(base64_decode($tx['data']), true);
+                            echo json_encode($data['params']);
+                        }
+                        if($tx['type']==TX_TYPE_SC_EXEC || $tx['type']==TX_TYPE_SC_SEND) {
+                            $data = json_decode(base64_decode($tx['message']),true);
+                            echo json_encode($data['params']);
+                        }
+                        ?>
+                    </td>
                 </tr>
             <?php } ?>
             </tbody>
@@ -1182,27 +1200,20 @@ $settings = @$_SESSION['settings'];
 <script type="text/javascript">
 
     function onSubmit(event) {
-        if ($(event.submitter).attr("name") === "deploy") {
-            let compiled_code = $("form [name=compiled_code]").val().trim()
-            let privateKey = $("form [name=private_key]").val().trim()
-            let msg = sign(compiled_code, privateKey)
-            let amount = $("form [name=deploy_amount]").val().trim()
-            //signTx(privateKey, amount, <?php echo TX_SC_CREATE_FEE ?>, msg, <?php echo TX_TYPE_SC_CREATE ?>);
-        }
         if($(event.submitter).data("call")) {
-            let method = $(event.submitter).data("call")
-            let params = []
-            if($("form [name='params["+method+"]']").length === 1) {
-                params =  $("form [name='params["+method+"]']").val().trim()
-                params = params.split(",")
-                params = params.map(function (item) { return item.trim() })
-                console.log(params)
-            }
-            let msg = JSON.stringify({method, params})
-            msg = btoa(msg)
-            let privateKey = $("form [name=private_key]").val().trim()
-            let amount = $("[name=amount").val();
-            signTx(privateKey, amount, <?php echo TX_SC_EXEC_FEE ?>, msg, <?php echo TX_TYPE_SC_EXEC ?>);
+            //let method = $(event.submitter).data("call")
+            //let params = []
+            //if($("form [name='params["+method+"]']").length === 1) {
+            //    params =  $("form [name='params["+method+"]']").val().trim()
+            //    params = params.split(",")
+            //    params = params.map(function (item) { return item.trim() })
+            //    console.log(params)
+            //}
+            //let msg = JSON.stringify({method, params})
+            //msg = btoa(msg)
+            //let privateKey = $("form [name=private_key]").val().trim()
+            //let amount = $("[name=amount").val();
+            //signTx(privateKey, amount, <?php //echo TX_SC_EXEC_FEE ?>//, msg, <?php //echo TX_TYPE_SC_EXEC ?>//);
         }
     }
 

@@ -26,8 +26,12 @@ foreach ($plugins as $plugin) {
 
 }
 
+$sbRightWidth = @$_SESSION['settings']['sidebars.sb-right-width'];
+if(!$sbRightWidth) {
+    $sbRightWidth="500px";
+}
 ?>
-<div id="SBRIGHT" class="sidebar">
+<div id="SBRIGHT" class="sidebar" style="width: <?php echo $sbRightWidth ?>; right: 0">
 
 	<div class="handle">
 		<span>|||</span>

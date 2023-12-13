@@ -12,10 +12,11 @@ $engines = [
 //		"name" => "Virtual",
 //        "NODE_URL" => "http://spectre:8000",
 //	],
-//	"local" => [
-//		"name" => "Local",
-//		"NODE_URL" => "http://spectre:8000",
-//	],
+	"local" => [
+		"name" => "Local",
+		"NODE_URL" => "http://spectre:8000",
+        "atheos_url"=>"http://atheos.spectre:8000/"
+	],
 //	"testnet" => [
 //		"name" => "Testnet",
 //		"NODE_URL" => "https://node1.phpcoin.net",
@@ -88,7 +89,7 @@ if(isset($_GET['auth_data'])) {
 	if($_SESSION['auth_request_code'] == $auth_data['request_code']) {
 		$_SESSION['account']=$auth_data['account'];
 	}
-	header("location: /atheos");
+	header("location: ".$engines[$_SESSION['engine']]['atheos_url']);
 	exit;
 }
 
@@ -97,7 +98,7 @@ if(isset($_GET['signature_data'])) {
     if(isset($signature_data['signature'])) {
         $_SESSION['contract']['signature']=$signature_data['signature'];
     }
-    header("location: /atheos?deploy=1");
+    header("location: ".$engines[$_SESSION['engine']]['atheos_url']."?deploy=1");
     exit;
 }
 
@@ -159,9 +160,10 @@ function compile() {
 }
 
 function sign_contract($virtual) {
+    global $engines;
     $request_code = uniqid();
     $_SESSION['request_code']=$request_code;
-    $redirect = urlencode("/atheos/?");
+    $redirect = urlencode( $engines[$_SESSION['engine']]['atheos_url']."?");
 
     $address=$_SESSION['account']['address'];
     $amount=$_POST['deploy_amount'];
@@ -218,6 +220,7 @@ function sign_contract($virtual) {
 }
 
 function deploy($virtual) {
+    global $engines;
     $address = $_SESSION['account']['address'];
     if(empty($address)) {
         $_SESSION['msg']=[['icon'=>'error', 'text'=>'Wallet address is required']];
@@ -259,6 +262,8 @@ function deploy($virtual) {
     $amount=$_POST['deploy_amount'];
     if(empty($amount)) $amount=0;
 
+    $_SESSION['contract']['deploy_amount']=$amount;
+
     $_SESSION['deploy_params']=$_POST['deploy_params'];
     $post_deploy_params = $_POST['deploy_params'];
     $arr=explode(",",$post_deploy_params);
@@ -284,7 +289,8 @@ function deploy($virtual) {
     if($virtual) {
         $signature = ec_sign($txdata, $_SESSION['account']['private_key']);
     } else if (empty($_SESSION['contract']['signature'])) {
-        $redirect = urlencode("/atheos/?");
+        file_put_contents("/home/marko/web/phpcoin/node/tmp/txdata", json_encode($data));
+        $redirect = urlencode($engines[$_SESSION['engine']]['atheos_url']."?");
         $url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/sign.php?&app=Atheos&address=$address&redirect=$redirect&no_return_message=1";
         echo '<!doctype html>
         <html lang="en">
@@ -351,7 +357,7 @@ function deploy($virtual) {
 
         $request_code = uniqid();
         $_SESSION['auth_request_code']=$request_code;
-        $redirect = urlencode("/atheos/?");
+        $redirect = urlencode($engines[$_SESSION['engine']]['atheos_url']."?");
         $tx = [
             "src"=>$transaction->src,
             "dst"=>$transaction->dst,
@@ -366,7 +372,7 @@ function deploy($virtual) {
         $request_code = uniqid("signtx");
         $_SESSION['request_code']=$request_code;
 
-        $url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/approve.php?&app=Faucet&request_code=$request_code&&redirect=$redirect&tx=$tx";
+        $url=NODE_URL . "/dapps.php?url=".MAIN_DAPPS_ID."/gateway/approve.php?&app=Atheos&request_code=$request_code&&redirect=$redirect&tx=$tx";
 
         echo '<!doctype html>
         <html lang="en">
@@ -440,6 +446,7 @@ function get_source() {
 }
 
 function exec_method($virtual) {
+    global $engines;
     $address = $_POST['address'];
     $fn_address = $_POST['fn_address'];
     $amount = $_POST['amount'];
@@ -540,7 +547,7 @@ function exec_method($virtual) {
 
         $request_code = uniqid();
         $_SESSION['auth_request_code']=$request_code;
-        $redirect = urlencode("/atheos/?");
+        $redirect = urlencode($engines[$_SESSION['engine']]['atheos_url']."?");
         $tx = [
             "src"=>$src,
             "dst"=>$dst,
@@ -638,9 +645,10 @@ function clear_view_method_val() {
 }
 
 function wallet_auth() {
+    global $engines;
     $request_code = uniqid();
     $_SESSION['auth_request_code']=$request_code;
-    $redirect = urlencode("/atheos/?");
+    $redirect = urlencode($engines[$_SESSION['engine']]['atheos_url']."?");
     $url=NODE_URL."/dapps.php?url=".MAIN_DAPPS_ID."/wallet/auth.php?app=Athoes&request_code=$request_code&redirect=$redirect";
     header("location: $url");
     exit;

@@ -13,3 +13,7 @@ public/*.min.*
 
 notes/*
 restore.php
+.idea/
+/components/editor/.sass-cache/
+/theme/.sass-cache/
+/fonts/file-icons/.sass-cache/

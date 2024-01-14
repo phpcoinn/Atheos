@@ -130,6 +130,7 @@ class ContextMenu {
 			"title" => "hr-git-folder",
 			"type" => "folder",
 		],
+////PHPCoin
 //		[
 //			"title" => "codegit_open",
 //			"icon" => "fas fa-code-branch",
@@ -150,6 +151,7 @@ class ContextMenu {
 //			"type" => "folder",
 //			"action" => "atheos.codegit.gitClone"
 //		],
+////PHPCoin
 		//////////////////////////////////////////////////////////////////////80
 		// Git File Actions
 		//////////////////////////////////////////////////////////////////////80

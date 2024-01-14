@@ -1,5 +1,5 @@
 <?php
-
+//PHPCoin - SC sidebar
 error_reporting(E_ALL^E_NOTICE);
 require_once '/var/www/phpcoin/include/init.inc.php';
 
@@ -848,9 +848,7 @@ foreach($list as $item) {
 
 asort($files);
 
-require_once('components/settings/class.settings.php');
 $activeUser = SESSION("user");
-$Settings = new Settings($activeUser);
 $settings = @$_SESSION['settings'];
 ?>
 

@@ -52,6 +52,7 @@ class Filemanager {
 			Common::send("error", "Invalid path.");
 		}
 
+        //PHPCoin
 		if (is_dir($path) && !is_link($path)) {
 			$path = preg_replace("/[\/]+/", "/", "$path/");
 		}
@@ -301,7 +302,7 @@ class Filemanager {
 	//////////////////////////////////////////////////////////////////////////80
 	public function open($path) {
 		if (!$path || !is_file($path)) {
-			Common::send("error", "Invalid path $path.");
+			Common::send("error", "Invalid path.");
 		}
 
 		$output = file_get_contents($path);

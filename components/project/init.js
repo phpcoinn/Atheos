@@ -115,8 +115,12 @@
 					projectPath
 				},
 				settled: function(status, reply) {
+
+					//PHPCoin - reload on examples project open
 					document.location.reload()
 					return;
+					//PHPCoin
+
 					atheos.toast.show(reply);
 					if (status === 'error') return;
 

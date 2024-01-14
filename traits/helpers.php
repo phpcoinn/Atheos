@@ -57,10 +57,6 @@ trait Helpers {
 	public static function data($type = false, $key = false, $val = null) {
 		if (!$type || !$key) return $val;
 
-        if($key=="projectPath" && $type == "SESSION" && $val != null) {
-            $a=1;
-        }
-
 		if (!empty($val) && $type === "SESSION") {
 			$_SESSION[$key] = $val;
 		}
@@ -155,6 +151,7 @@ trait Helpers {
 		// Unnecessary, but rather be safe that sorry.
 		if ($target === "." || $target === "..") return true;
 
+        //PHPCoin
         if(is_link($target)) {
             $status = unlink($target);
         }

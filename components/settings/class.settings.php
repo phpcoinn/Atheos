@@ -16,8 +16,7 @@ class Settings {
 	// PROPERTIES
 	//////////////////////////////////////////////////////////////////////////80
 	private $activeUser = null;
-	//phpcoin: allow public access to db
-	public $db = null;
+	private $db = null;
 
 	//////////////////////////////////////////////////////////////////////////80
 	// METHODS
@@ -37,8 +36,8 @@ class Settings {
 	// Load User Settings
 	//////////////////////////////////////////////////////////////////////////80
 	public function load() {
+        //PHPCoin - settings in session
 		$settings = $_SESSION['settings'];
-//		$settings = $this->db->select("*");
 		if (!empty($settings)) {
 			Common::send("success", $settings);
 		} else {
@@ -50,7 +49,7 @@ class Settings {
 	// Save User Settings
 	//////////////////////////////////////////////////////////////////////////80
 	public function save($key, $value) {
-//		$this->db->update($key, $value, true);
+        //PHPCoin - settings in session
 		$_SESSION['settings'][$key]=$value;
 		Common::send("success");
 	}

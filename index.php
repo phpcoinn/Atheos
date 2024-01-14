@@ -12,7 +12,7 @@
 
 require_once("common.php");
 
-
+//PHPCoin - toggle theme
 if(isset($_REQUEST['toggleTheme'])) {
     if(isset($_SESSION['theme'])) {
         if($_SESSION['theme']=="dark") {
@@ -78,6 +78,7 @@ if(isset($_SESSION['theme'])) {
 }
 
 ob_start()
+// PHPCoin
 
 ?>
 <!doctype html>
@@ -95,6 +96,8 @@ ob_start()
 	// Load THEME
 	echo("<!-- THEME -->\n");
 	echo("\t<link rel=\"stylesheet\" href=\"theme/main.min.css\">\n");
+
+    //PHPCOin - include dark theme
     if($theme!="dark") {
 	    echo("\t<link rel=\"stylesheet\" href=\"theme/custom.css\">\n");
     }

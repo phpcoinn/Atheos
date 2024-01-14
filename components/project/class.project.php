@@ -192,8 +192,13 @@ class Project {
 
 		if ($projectName && $projectPath) {
 
-			SESSION("projectName", $projectName);
-			SESSION("projectPath", $projectPath);
+            $folder = $_SESSION['projectPath'];
+            if(!file_exists($folder."/examples")) {
+                $res = symlink(BASE_PATH . "/workspace/examples/demo", $folder."/examples");
+            }
+
+			SESSION("projectName", "PHPCoin Smart Contracts");
+			SESSION("projectPath", $folder);
 
 			Common::send("success", array(
 				"name" => $projectName,

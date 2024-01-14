@@ -115,6 +115,8 @@
 					projectPath
 				},
 				settled: function(status, reply) {
+					document.location.reload()
+					return;
 					atheos.toast.show(reply);
 					if (status === 'error') return;
 

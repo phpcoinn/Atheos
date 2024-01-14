@@ -52,7 +52,7 @@ class Filemanager {
 			Common::send("error", "Invalid path.");
 		}
 
-		if (is_dir($path)) {
+		if (is_dir($path) && !is_link($path)) {
 			$path = preg_replace("/[\/]+/", "/", "$path/");
 		}
 

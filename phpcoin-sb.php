@@ -12,11 +12,11 @@ $engines = [
 //		"name" => "Virtual",
 //        "NODE_URL" => "http://spectre:8000",
 //	],
-	"local" => [
-		"name" => "Local",
-		"NODE_URL" => "http://spectre:8000",
-        "atheos_url"=>"http://atheos.spectre:8000/"
-	],
+//	"local" => [
+//		"name" => "Local",
+//		"NODE_URL" => "http://spectre:8000",
+//        "atheos_url"=>"http://atheos.spectre:8000/"
+//	],
 //	"testnet" => [
 //		"name" => "Testnet",
 //		"NODE_URL" => "https://node1.phpcoin.net",
@@ -146,13 +146,14 @@ function compile() {
         exit;
     }
     $code=base64_encode(file_get_contents($phar_file));
-    $res = SmartContractEngine::verifyCode($code, $error);
-    if(!$res) {
+    $interface = SmartContractEngine::verifyCode($code, $error);
+    if(!$interface) {
         $_SESSION['msg']=[['icon'=>'error', 'text'=>'Error verify smart contract:'.$error]];
         header("location: ".$_SERVER['REQUEST_URI']);
         exit;
     }
     $_SESSION['contract']['phar_code']=$code;
+    $_SESSION['contract']['interface']=$interface;
     $_SESSION['contract']['status']="compiled";
     header("location: ".$_SERVER['REQUEST_URI']);
     exit;
@@ -704,7 +705,7 @@ function getProjectFolder() {
 
 if(isset($_POST['reset'])) resetForm();
 if(isset($_POST['compile'])) compile();
-if(isset($_POST['sign_contract'])) sign_contract($virtual);
+//if(isset($_POST['sign_contract'])) sign_contract($virtual);
 if(isset($_POST['deploy'])) deploy($virtual);
 if(isset($_POST['save'])) save();
 if(isset($_POST['set_contract'])) set_contract();
@@ -830,11 +831,14 @@ if($virtual) {
 }
 
 $folder = getProjectFolder();
-$cmd = "find $folder -type f -name '*.php'";
-$output = Common::execute($cmd);
-$output = $output["text"];
-
-$list = explode("\n", $output);
+$rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($folder, FilesystemIterator::SKIP_DOTS | FilesystemIterator::FOLLOW_SYMLINKS));
+$list = array();
+foreach ($rii as $file) {
+    if ($file->isDir()){
+        continue;
+    }
+    $list[] = $file->getPathname();
+}
 $files = [];
 foreach($list as $item) {
     if(strpos($item, $folder) !== false) {
@@ -1000,7 +1004,10 @@ $settings = @$_SESSION['settings'];
 
         <?php if (!empty($_SESSION['contract']['phar_code'])) {
             $disabled = $_SESSION['contract']['status']=="in mempool" || $_SESSION['contract']['status']=="deployed";
-
+            $deploy_params=[];
+            foreach ($_SESSION['contract']['interface']['deploy']['params'] as $param) {
+                $deploy_params[]=$param['name'];
+            }
             ?>
             <hr/>
             <h4><strong>Deploy contract (<?php echo @$_SESSION['contract']['status'] ?>)</strong></h4>
@@ -1017,12 +1024,13 @@ $settings = @$_SESSION['settings'];
                 </div>
                 <div class="col-3">Amount</div>
                 <div class="col-9">
-                    <input type="text" name="deploy_amount" value="<?php echo $_SESSION['contract']['deploy_amount'] ?>" placeholder="Amount"
+                    <input type="text" name="deploy_amount" value="<?php echo $_SESSION['contract']['deploy_amount'] ?>" placeholder="0"
                            <?php if($disabled) { ?>readonly<?php } ?>/>
                 </div>
                 <div class="col-3">Parameters</div>
                 <div class="col-9">
-                    <input type="text" name="deploy_params" value="<?php echo $_SESSION['contract']['deploy_params'] ?>" placeholder="Param1, Param2, ..."
+                    <input type="text" name="deploy_params" value="<?php echo $_SESSION['contract']['deploy_params'] ?>"
+                           placeholder="<?php echo implode(", ", $deploy_params) ?>"
                            <?php if($disabled) { ?>readonly<?php } ?>/>
                 </div>
                 <?php if(!empty($_SESSION['contract']['signature'])) { ?>
@@ -1064,7 +1072,7 @@ $settings = @$_SESSION['settings'];
     <?php } ?>
     <hr/>
 
-	<?php if (@$_SESSION['contract']['interface']) { ?>
+	<?php if (@$_SESSION['contract']['status']=="deployed") { ?>
             <div>
         Interface
         <br/>Smart contract:
@@ -1102,7 +1110,7 @@ $settings = @$_SESSION['settings'];
                             <select name="fn_address">
                                 <?php foreach($_SESSION['accounts'] as $account) { ?>
                                     <option value="<?php echo $account['address'] ?>"
-                                            <?php if ($_SESSION['account']['address']==$account['address']) { ?>selected="selected"<?php } ?>>
+                                            <?php if (@$_SESSION['fn_address']==$account['address']) { ?>selected="selected"<?php } ?>>
                                         <?php echo $account['address'] ?>
                                         <?php if ($account['address'] == @$_SESSION['contract']['address']) { ?> (SmartContract)<?php } ?>
                                     </option>

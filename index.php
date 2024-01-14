@@ -45,7 +45,7 @@ require_once "components/project/class.project.php";
 SESSION("user", "user");
 SESSION("lang", "en");
 
-$projectName = "example";
+$projectName = "PHPCoin Smart Contracts";
 $projectPath = session_id();
 
 $Project = new Project();

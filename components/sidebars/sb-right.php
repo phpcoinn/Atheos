@@ -35,45 +35,18 @@ foreach ($plugins as $plugin) {
 
 	<div class="title">
 		<i class="lock fas fa-lock"></i>
+<!--        PHPCOin - save and toggle theme-->
         <a onclick="atheos.active.saveAll();" style="display: contents"><i class="fa fa-save"></i></a>
         <a href="<?php echo $_SERVER['REQUEST_URI'] ?>?&toggleTheme" style="display: contents"><i class="fa fa-sun"></i></a>
 	</div>
 
 	<div class="content">
 
-        <?php if (SESSION("user")=="admin") { ?>
 
-		<?php
-		////////////////////////////////////////////////////////////
-		// Load Right Bar
-		////////////////////////////////////////////////////////////
-		foreach ($right_bar as $item_rb => $data) {
-			$data["admin"] = isset($data["admin"]) ? $data["admin"] : false;
-
-			if ($data['title'] === 'break') {
-				if (!$data['admin'] && $access) {
-					echo("<hr>");
-				}
-			} elseif ($data['title'] != 'pluginbar' && $data['onclick'] == '') {
-				if (!$data['admin'] || $access) {
-					echo("<label class=\"category\">" . i18n($data["title"]) . "</label>");
-				}
-			} elseif ($data['title'] === 'pluginbar') {
-				if (!$data['admin'] || $access) {
-					echo($pluginHTML);
-				}
-			} else {
-				if (!$data['admin'] || $access) {
-					echo('<a onclick="'.$data['onclick'].'"><i class="'.$data['icon'].'"></i>'.i18n($data['title']).'</a>');
-				}
-			}
-		} ?>
-
-        <?php } else {
-
+        <?php
+            //PHPCoin - include SC panel
             require_once "phpcoin-sb.php";
-
-        } ?>
+        ?>
 
 		<hint id="last_login"><i class="fas fa-clock"></i><span>Last Login: DateTime</span></hint>
 	</div>

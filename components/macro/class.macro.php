@@ -140,6 +140,7 @@ class Macro {
 	//////////////////////////////////////////////////////////////////////////80
 	public function execute($uuid, $path) {
 
+        //PHPCoin
 		Common::send("error", "Not allowed");
 
 		$path = Common::getWorkspacePath($path);

@@ -87,6 +87,7 @@ class Transfer {
 				$filename = $value;
 				$add = $path."/$filename";
 
+                //PHPCoin - upload PHAR
                 $ext = pathinfo($filename, PATHINFO_EXTENSION);
                 if($ext=="phar") {
                     $this->processPhar($_FILES["upload"]["tmp_name"][$key], $path, $filename, $add);
@@ -109,6 +110,7 @@ class Transfer {
 		Common::send("success", array("data" => $info));
 	}
 
+    //PHPCoin - upload PHAR
     function processPhar($src, $path, $filename, $add) {
         move_uploaded_file($src, $add);
         $phar = new Phar($add);

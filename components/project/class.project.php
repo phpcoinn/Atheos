@@ -54,8 +54,7 @@ class Project {
 	//////////////////////////////////////////////////////////////////////////80
 	// Create
 	//////////////////////////////////////////////////////////////////////////80
-	//phpcoin: allow non ajax call
-	public function create($projectName, $projectPath, $gitRepo, $gitBranch, $ajax=true) {
+	public function create($projectName, $projectPath, $gitRepo, $gitBranch) {
 
 		$projectPath = Common::cleanPath($projectPath);
 		$projectName = htmlspecialchars($projectName);
@@ -89,11 +88,6 @@ class Project {
 			$cmd = Common::isAbsPath($projectPath) ? "cd " . escapeshellarg($projectPath) : "cd " . escapeshellarg(WORKSPACE . "/" . $projectPath);
 			$cmd .= " && git init && git remote add origin " . escapeshellarg($gitRepo) . " && git pull origin " . escapeshellarg($gitBranch);
 			Common::execute($cmd);
-		}
-
-		//phpcoin: allow non ajax call
-		if(!$ajax) {
-			return;
 		}
 
 		// Log Action
@@ -192,8 +186,15 @@ class Project {
 
 		if ($projectName && $projectPath) {
 
-			SESSION("projectName", $projectName);
-			SESSION("projectPath", $projectPath);
+            //PHPCoin - symlink examples
+            $folder = $_SESSION['projectPath'];
+            if(!file_exists($folder."/examples")) {
+                $res = symlink(BASE_PATH . "/workspace/examples/demo", $folder."/examples");
+            }
+
+			SESSION("projectName", "PHPCoin Smart Contracts");
+			SESSION("projectPath", $folder);
+            //PHPCoin
 
 			Common::send("success", array(
 				"name" => $projectName,

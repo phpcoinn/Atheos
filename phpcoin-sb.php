@@ -1,7 +1,24 @@
 <?php
 //PHPCoin - SC sidebar
+
+require_once("common.php");
+
+
 error_reporting(E_ALL^E_NOTICE);
 require_once '/var/www/phpcoin/include/init.inc.php';
+
+if(isset($_POST['ajax'])) {
+    $ajax = true;
+    $formData = $_POST['formData'];
+    unset($_SESSION['msg']);
+    parse_str($formData, $_POST);
+    ob_end_clean();
+    ob_start();
+    register_shutdown_function(function () {
+        $content = ob_get_contents();
+        echo $content;
+    });
+}
 
 $engines = [
 	"virtual" => [
@@ -447,7 +464,12 @@ function set_contract() {
 function get_source() {
     $code = $_SESSION['contract']['phar_code'];
     $code=base64_decode($code);
-    $phar_file = ROOT . "/tmp/".uniqid().".phar";
+    if(isset($_SESSION['contract']['address'])) {
+        $name=$_SESSION['contract']['address'];
+    } else {
+        $name = md5($code);
+    }
+    $phar_file = ROOT . "/tmp/".$name.".phar";
     file_put_contents($phar_file, $code);
 
     ob_end_clean();
@@ -702,6 +724,7 @@ function getProjectFolder() {
     }
     return $folder;
 }
+if(isset($_GET['get_source'])) get_source();
 
 if(isset($_POST['reset'])) resetForm();
 if(isset($_POST['compile'])) compile();
@@ -709,7 +732,6 @@ if(isset($_POST['compile'])) compile();
 if(isset($_POST['deploy'])) deploy($virtual);
 if(isset($_POST['save'])) save();
 if(isset($_POST['set_contract'])) set_contract();
-if(isset($_POST['get_source'])) get_source();
 if(isset($_POST['exec_method'])) exec_method($virtual);
 if(isset($_POST['view_method'])) view_method($virtual);
 if(isset($_POST['get_property_val'])) get_property_val($virtual);
@@ -854,7 +876,7 @@ $settings = @$_SESSION['settings'];
 
 <form id="phpcoin-sb" class="p-2" method="post" action="" onsubmit="onSubmit(event)">
 
-    <div class="flex align-items-center align-content-between">
+    <div class="flex flex-wrap align-items-center align-content-between">
         <div class="">
             <h4>Smart Contract actions</h4>
         </div>
@@ -865,8 +887,8 @@ $settings = @$_SESSION['settings'];
     </div>
     <hr/>
     <div class="grid align-items-center grid-nogutter">
-        <div class="col-3">Engine:</div>
-        <div class="col-9">
+        <div class="col-12 sm:col-3">Engine:</div>
+        <div class="col-12 sm:col-9">
             <select name="engine" class="p-1">
                 <?php foreach ($engines as $engine_id => $engine_config) { ?>
                     <option value="<?php echo $engine_id ?>" <?php if($engine_id == $engine) { ?>selected="selected"<?php } ?>><?php echo $engine_config['name'] ?></option>
@@ -877,10 +899,10 @@ $settings = @$_SESSION['settings'];
 
 	<?php if ($virtual) { ?>
         <div class="grid align-items-center grid-nogutter">
-            <div class="col-3">
+            <div class="col-12 sm:col-3">
                 Wallet address:
             </div>
-            <div class="col-9">
+            <div class="col-12 sm:col-9">
                 <select name="address" onchange="this.form.submit()">
                     <?php foreach($_SESSION['accounts'] as $account) { ?>
                         <option value="<?php echo $account['address'] ?>"
@@ -891,29 +913,30 @@ $settings = @$_SESSION['settings'];
                     <?php } ?>
                 </select>
             </div>
-            <div class="col-3">
+            <div class="col-12 sm:col-3">
                 Private key:
             </div>
-            <div class="col-9">
+            <div class="col-12 sm:col-9">
                 <input type="text" value="<?php echo $private_key ?>" class="p-1" name="private_key" <?php if($virtual) { ?>readonly="readonly"<?php } ?>/>
             </div>
-            <div class="col-3">
+            <div class="col-12 sm:col-3">
                 Balance:
             </div>
-            <div class="col-9">
-				<?php echo num($balance) ?> (<?php echo $_SESSION['account']['address'] ?>)
+            <div class="col-12 sm:col-9 flex flex-wrap">
+                <div><?php echo num($balance) ?></div>
+                <div>(<?php echo $_SESSION['account']['address'] ?>)</div>
             </div>
         </div>
     <?php } else { ?>
         <div class="grid align-items-center grid-nogutter">
-            <div class="col-3">
+            <div class="col-12 sm:col-3">
                 Wallet:
 	            <?php if (isset($_SESSION['account'])) { ?>
                     <br/>
                     <button name="logout" type="submit" class="p-1">Logout</button>
                 <?php } ?>
             </div>
-            <div class="col-9">
+            <div class="col-12 sm:col-9">
                 <?php if (isset($_SESSION['account'])) { ?>
                     <a target="_blank" href="<?php echo NODE_URL ?>/apps/explorer/address.php?address=<?php echo $_SESSION['account']['address'] ?>">
                         <?php echo $_SESSION['account']['address'] ?>
@@ -936,8 +959,8 @@ $settings = @$_SESSION['settings'];
     <?php if (count($deployedContracts)>0) { ?>
         Deployed contracts:
         <div class="grid align-items-center grid-nogutter">
-            <div class="col-3">Contract:</div>
-            <div class="col-9">
+            <div class="col-12 sm:col-3">Contract:</div>
+            <div class="col-12 sm:col-9">
                 <div class="flex">
                     <select name="contract" class="p-1 w-auto">
                         <option value="">Select...</option>
@@ -953,17 +976,17 @@ $settings = @$_SESSION['settings'];
                 </div>
             </div>
             <?php if ($_SESSION['contract']['status']=="deployed") { ?>
-                <div class="col-3">Height:</div>
-                <div class="col-9"><?php echo $_SESSION['contract']['height'] ?></div>
-                <div class="col-3">
+                <div class="col-12 sm:col-3">Height:</div>
+                <div class="col-12 sm:col-9"><?php echo $_SESSION['contract']['height'] ?></div>
+                <div class="col-12 sm:col-3">
                     Code:<br/>
                     <button type="submit" name="download" class="p-1">Download</button>
                 </div>
-                <div class="col-9">
+                <div class="col-12 sm:col-9">
                     <textarea readonly><?php echo $_SESSION['contract']['code'] ?></textarea>
                 </div>
-                <div class="col-3">Signature:</div>
-                <div class="col-9">
+                <div class="col-12 sm:col-3">Signature:</div>
+                <div class="col-12 sm:col-9">
                     <input type="text" value="<?php echo $_SESSION['contract']['signature'] ?>" readonly/>
                 </div>
             <?php } ?>
@@ -974,9 +997,9 @@ $settings = @$_SESSION['settings'];
         <hr/>
         Contract source
         <div class="grid align-items-center grid-nogutter">
-            <div class="col-3">Source:</div>
-            <div class="col-9">
-                <div class="flex">
+            <div class="col-12 sm:col-3">Source:</div>
+            <div class="col-12 sm:col-9">
+                <div class="flex flex-wrap">
                     <select name="source" class="p-1" <?php if (@$_SESSION['contract']['status']=="deployed" && !$virtual) { ?>disabled<?php } ?>>
                         <option value="folder" <?php if(@$_SESSION['source']=="folder") { ?>selected="selected"<?php } ?>>Whole folder</option>
                         <?php foreach($files as $file) { ?>
@@ -989,12 +1012,14 @@ $settings = @$_SESSION['settings'];
         </div>
         <?php if (!empty($_SESSION['contract']['phar_code'])) { ?>
             <div class="grid align-items-center grid-nogutter">
-                <div class="col-3">
+                <div class="col-12 sm:col-3">
                     Compiled code:
                     <br/>
-                    <button type="submit" name="get_source">Source</button>
+                    <a href="/phpcoin-sb.php?get_source" target="_blank">
+                        <button type="button">Source</button>
+                    </a>
                 </div>
-                <div class="col-9">
+                <div class="col-12 sm:col-9">
                     <textarea name="compiled_code" rows="3" cols="30" readonly="readonly" <?php if (@$_SESSION['contract']['status']=="deployed") { ?>disabled<?php } ?>><?php echo $_SESSION['contract']['phar_code'] ?></textarea>
                 </div>
             </div>
@@ -1010,30 +1035,30 @@ $settings = @$_SESSION['settings'];
             <hr/>
             <h4><strong>Deploy contract (<?php echo @$_SESSION['contract']['status'] ?>)</strong></h4>
             <div class="grid align-items-center grid-nogutter">
-                <div class="col-3">Name</div>
-                <div class="col-9">
+                <div class="col-12 sm:col-3">Name</div>
+                <div class="col-12 sm:col-9">
                     <input type="text" name="contract_name" value="<?php echo $_SESSION['contract']['name'] ?>" placeholder="Name"
                            <?php if($disabled) { ?>readonly<?php } ?>/>
                 </div>
-                <div class="col-3">Description</div>
-                <div class="col-9">
+                <div class="col-12 sm:col-3">Description</div>
+                <div class="col-12 sm:col-9">
                     <input type="text" name="contract_description" value="<?php echo $_SESSION['contract']['description'] ?>" placeholder="Description"
                            <?php if($disabled) { ?>readonly<?php } ?>/>
                 </div>
-                <div class="col-3">Amount</div>
-                <div class="col-9">
+                <div class="col-12 sm:col-3">Amount</div>
+                <div class="col-12 sm:col-9">
                     <input type="text" name="deploy_amount" value="<?php echo $_SESSION['contract']['deploy_amount'] ?>" placeholder="0"
                            <?php if($disabled) { ?>readonly<?php } ?>/>
                 </div>
-                <div class="col-3">Parameters</div>
-                <div class="col-9">
+                <div class="col-12 sm:col-3">Parameters</div>
+                <div class="col-12 sm:col-9">
                     <input type="text" name="deploy_params" value="<?php echo $_SESSION['contract']['deploy_params'] ?>"
                            placeholder="<?php echo implode(", ", $deploy_params) ?>"
                            <?php if($disabled) { ?>readonly<?php } ?>/>
                 </div>
                 <?php if(!empty($_SESSION['contract']['signature'])) { ?>
-                    <div class="col-3">Signature:</div>
-                    <div class="col-9">
+                    <div class="col-12 sm:col-3">Signature:</div>
+                    <div class="col-12 sm:col-9">
                         <?php //if (empty($_SESSION['contract']['signature'])) { ?>
     <!--                        <button type="submit" name="sign_contract" class="p-1">Sign</button>-->
                         <?php //} else { ?>
@@ -1041,8 +1066,8 @@ $settings = @$_SESSION['settings'];
                         <?php //} ?>
                     </div>
                 <?php } ?>
-                <div class="col-3">Contract address:</div>
-                <div class="col-9">
+                <div class="col-12 sm:col-3">Contract address:</div>
+                <div class="col-12 sm:col-9">
                     <div class="flex">
                         <?php if($virtual) {?>
                             <select name="deploy_address" <?php if ($_SESSION['contract']['status']=="deployed") { ?>disabled<?php } ?>>
@@ -1059,8 +1084,8 @@ $settings = @$_SESSION['settings'];
                         <?php } ?>
                     </div>
                 </div>
-                <div class="col-3"></div>
-                <div class="col-9">
+                <div class="col-12 sm:col-3"></div>
+                <div class="col-12 sm:col-9">
                 <?php if (!$disabled) { ?>
                     <button type="submit" name="deploy" class="p-1" <?php if (@$_SESSION['contract']['status']=="deployed") { ?>disabled<?php } ?>>Deploy</button>
                 <?php } ?>
@@ -1090,17 +1115,17 @@ $settings = @$_SESSION['settings'];
 
         <div style="display: <?php if (!isset($_SESSION['interface_tab']) || $_SESSION['interface_tab']=="methods") { ?>block<?php } else { ?>none<?php } ?>" class="tab" name="methods">
             <div class="grid grid-nogutter row">
-                <div class="col-3">
+                <div class="col-12 sm:col-3">
                     Type
                 </div>
-                <div class="col-9 px-2">
+                <div class="col-12 sm:col-9 px-2">
                     <input onclick="this.form.submit()" type="radio" name="method_type" id="method_type_exec" value="exec" style="width: auto" <?php if (!isset($_SESSION['method_type']) || @$_SESSION['method_type']=="exec") { ?>checked<?php } ?>/> Exec
                     <input onclick="this.form.submit()" type="radio" name="method_type" id="method_type_send" value="send" style="width: auto" <?php if (@$_SESSION['method_type']=="send") { ?>checked<?php } ?>/> Send
                 </div>
-                <div class="col-3">
+                <div class="col-12 sm:col-3">
                     Address
                 </div>
-                <div class="col-9 px-2">
+                <div class="col-12 sm:col-9 px-2">
                     <?php if($virtual) { ?>
                         <?php if (@$_SESSION['method_type']=="exec") { ?>
                             <input type="text" value="<?php echo $_SESSION['contract']['address'] ?>" class="p-1" name="fn_address" placeholder="<?php echo $_SESSION['contract']['address'] ?>"/>
@@ -1124,20 +1149,20 @@ $settings = @$_SESSION['settings'];
                     }
                     ?>
                 </div>
-                <div class="col-3">
+                <div class="col-12 sm:col-3">
                     Amount
                 </div>
-                <div class="col-9  px-2">
+                <div class="col-12 sm:col-9  px-2">
                     <input type="text" value="<?php echo @$_SESSION['amount'] ?>" class="p-1" name="amount" placeholder="Amount"/>
                 </div>
             </div>
 	        <?php if(is_array($_SESSION['contract']['interface']['methods'])) {
                 foreach ($_SESSION['contract']['interface']['methods'] as $method) { ?>
                 <div class="grid grid-nogutter">
-                    <div class="col-3">
+                    <div class="col-12 sm:col-3">
                         <button type="submit" class="p-1 w-full" data-call="<?php echo $method['name'] ?>" name="exec_method[<?php echo $method['name'] ?>]"><?php echo $method['name'] ?></button>
                     </div>
-                    <div class="col-9  px-2">
+                    <div class="col-12 sm:col-9  px-2">
                         <?php if (count($method['params']) > 0) { ?>
                             <input type="text" value="<?php echo @$_SESSION['params'][$method['name']] ?>" class="p-1" name="params[<?php echo $method['name'] ?>]"
                                    placeholder="<?php echo implode(",", $method['params']) ?>"/>
@@ -1154,10 +1179,10 @@ $settings = @$_SESSION['settings'];
 		        $name = $method['name'];
 		        ?>
                 <div class="grid grid-nogutter">
-                    <div class="col-3">
+                    <div class="col-12 sm:col-3">
                         <button type="submit" class="p-1 w-full" name="view_method[<?php echo $name ?>]"><?php echo $name ?></button>
                     </div>
-                    <div class="col-9 flex align-items-center align-content-between  px-2">
+                    <div class="col-12 sm:col-9 flex align-items-center align-content-between  px-2">
                         <?php if (count($method['params']) > 0) { ?>
                             <input type="text" class="flex-grow-1 p-1" value="" name="params[<?php echo $name ?>]" placeholder="<?php echo implode(",", $method['params']) ?>"/>
                         <?php } ?>
@@ -1179,10 +1204,10 @@ $settings = @$_SESSION['settings'];
 		        $type = @$property['type'];
 		        ?>
                 <div class="grid grid-nogutter">
-                    <div class="col-3">
+                    <div class="col-12 sm:col-3">
                         <button type="submit" class="p-1 w-full" name="get_property_val[<?php echo $name ?>]"><?php echo $name ?></button>
                     </div>
-                    <div class="col-9 flex align-items-center align-content-between px-2">
+                    <div class="col-12 sm:col-9 flex align-items-center align-content-between px-2">
                         <?php if($type == "map") { ?>
                             <input type="text" class="flex-grow-1 p-1" name="property_key[<?php echo $name ?>]" value="<?php echo @$_SESSION['property_key'][$name] ?>"
                                    placeholder="Key"/>
@@ -1207,7 +1232,7 @@ $settings = @$_SESSION['settings'];
         <hr/>
     <div class="mt-3">
         Transactions
-        <div style="overflow-x: auto; scrollbar-color: auto; scrollbar-width: auto;">
+        <div style="overflow-x: auto; scrollbar-color: auto; scrollbar-width: auto; max-height: 30vh;">
         <table class="table table-striped table-condensed">
             <thead>
             <tr>
@@ -1290,6 +1315,37 @@ $settings = @$_SESSION['settings'];
 <script type="text/javascript">
 
     function onSubmit(event) {
+        console.log(event)
+        let formData = $("form").serialize()
+        let submitter = $(event.submitter)
+        formData += '&' + submitter.attr('name') + '=' + submitter.val()
+        event.preventDefault();
+
+        $("#SBRIGHT #phpcoin-sb").css('opacity', 0.5)
+
+        echo({
+            url: '/phpcoin-sb.php',
+            data: {
+                formData: formData,
+                ajax: true
+            },
+            settled: function(status, reply) {
+                let tmp = $('<div style="display:none"><div>')
+                tmp.html(reply)
+                $("body").append(tmp)
+                let sb = tmp.find("#phpcoin-sb")
+                let h = sb.html()
+                tmp.remove()
+                $("#SBRIGHT #phpcoin-sb").html(h)
+                $("#SBRIGHT #phpcoin-sb").css('opacity', 1)
+                // if (status !== 'success') toast(status, reply);
+                // if (hidden) return;
+                // // self.displayStatus(reply);
+                // toast(status, 'Setting "' + key + '" saved.');
+
+            }
+        });
+
         if($(event.submitter).data("call")) {
             //let method = $(event.submitter).data("call")
             //let params = []
@@ -1363,10 +1419,10 @@ $settings = @$_SESSION['settings'];
     #SBRIGHT #last_login {
         display: none;
     }
-    #SBRIGHT {
-        width: <?php echo $settings['sidebars.sb-right-width'] ?>;
-        user-select: auto;
-    }
+    /*#SBRIGHT {*/
+    /*    width: */<?php //echo $settings['sidebars.sb-right-width'] ?>/*;*/
+    /*    user-select: auto;*/
+    /*}*/
     #SBRIGHT .if-tabs {
         margin-top: 10px;
         margin-bottom: 10px;
@@ -1389,6 +1445,23 @@ $settings = @$_SESSION['settings'];
         margin: unset;
         color: inherit;
         padding: unset;
+    }
+    #workspace #ACTIVE, #workspace #BOTTOM {
+        width: auto !important;
+        min-width: 10px;
+    }
+
+    @media (max-width: 576px) {
+        #workspace #SBLEFT {
+            width:80vw;
+        }
+        #workspace #SBRIGHT {
+            width:80vw;
+        }
+        #workspace #ACTIVE, #workspace #BOTTOM {
+            width: auto !important;
+            min-width: 10px;
+        }
     }
 </style>
 

@@ -87,7 +87,8 @@ ob_start()
 	<meta charset="utf-8">
 	<title><?php if (defined("DOMAIN") && DOMAIN) echo(DOMAIN . " | ") ?>Atheos IDE</title>
 	<meta name="author" content="Liam Siira">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--    //PHPcoin fix for mobile screen-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
 	<meta name="description" content="A Web-Based IDE with a small footprint and minimal requirements">
 	<!-- FAVICONS -->
 	<?php

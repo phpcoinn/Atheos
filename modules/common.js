@@ -69,7 +69,8 @@
 					// I could have made a nice If statement to switch the appropriate classes
 					// on menu open vs close, however converting the boolean value to a number
 					// was an inspirational moment and seemed really cool.
-					$(buttonID).replaceClass(switchClasses[+menuOpen], switchClasses[+!menuOpen]);
+					//PHPcoin fix
+					oX(buttonID).replaceClass(switchClasses[+menuOpen], switchClasses[+!menuOpen]);
 				}
 				if (menuOpen) {
 					menu.close();

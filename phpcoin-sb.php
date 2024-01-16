@@ -287,13 +287,8 @@ function deploy($virtual) {
 
     $_SESSION['deploy_params']=$_POST['deploy_params'];
     $post_deploy_params = $_POST['deploy_params'];
-    $arr=explode(",",$post_deploy_params);
-    $deploy_params = [];
-    foreach ($arr as $item) {
-        $item = trim($item);
-        if(strlen($item) == 0) continue;
-        $deploy_params[]=$item;
-    }
+
+    $deploy_params = SmartContractEngine::parseCmdLineArgs($post_deploy_params);
 
     $interface = SmartContractEngine::verifyCode($compiled_code, $error);
 
@@ -535,19 +530,10 @@ function exec_method($virtual) {
     }
 
     $exec_method = array_keys($_POST['exec_method'])[0];
-    $_SESSION['params'][$exec_method]=$_POST['params'][$exec_method];
+    $post_params = $_POST['params'][$exec_method];
+    $_SESSION['params'][$exec_method]=$post_params;
 
-    $params = [];
-    if(isset($_POST['params'][$exec_method])) {
-        $post_params = $_POST['params'][$exec_method];
-        $post_params = explode(",", $post_params);
-        foreach($post_params as &$item) {
-            $item = trim($item);
-            if(strlen($item)>0) {
-                $params[]=$item;
-            }
-        }
-    }
+    $params = SmartContractEngine::parseCmdLineArgs($post_params);
 
     $data = [
         "method" => $exec_method,
@@ -610,17 +596,10 @@ function view_method($virtual) {
     $view_method = array_keys($_POST['view_method'])[0];
 
     $_SESSION['interface_tab']="views";
+    $post_params = $_POST['params'][$view_method];
+    $_SESSION['params'][$view_method]=$post_params;
+    $params =  SmartContractEngine::parseCmdLineArgs($post_params);
 
-    $params = [];
-    if(isset($_POST['params'][$view_method])) {
-        $view_method_params = explode(",", $_POST['params'][$view_method]);
-        foreach($view_method_params as &$item) {
-            $item = trim($item);
-            if(strlen($item)>0) {
-                $params[]=$item;
-            }
-        }
-    }
     if($virtual) {
         SmartContractEngine::$virtual = true;
         SmartContractEngine::$smartContract = $_SESSION['contract'];
@@ -1052,8 +1031,8 @@ $settings = @$_SESSION['settings'];
                 </div>
                 <div class="col-12 sm:col-3">Parameters</div>
                 <div class="col-12 sm:col-9">
-                    <input type="text" name="deploy_params" value="<?php echo $_SESSION['contract']['deploy_params'] ?>"
-                           placeholder="<?php echo implode(", ", $deploy_params) ?>"
+                    <input type="text" name="deploy_params" value="<?php echo htmlspecialchars($_SESSION['contract']['deploy_params']) ?>"
+                           placeholder="<?php echo implode(" ", $deploy_params) ?>"
                            <?php if($disabled) { ?>readonly<?php } ?>/>
                 </div>
                 <?php if(!empty($_SESSION['contract']['signature'])) { ?>
@@ -1164,8 +1143,8 @@ $settings = @$_SESSION['settings'];
                     </div>
                     <div class="col-12 sm:col-9  px-2">
                         <?php if (count($method['params']) > 0) { ?>
-                            <input type="text" value="<?php echo @$_SESSION['params'][$method['name']] ?>" class="p-1" name="params[<?php echo $method['name'] ?>]"
-                                   placeholder="<?php echo implode(",", $method['params']) ?>"/>
+                            <input type="text" value="<?php echo htmlspecialchars(@$_SESSION['params'][$method['name']]) ?>" class="p-1" name="params[<?php echo $method['name'] ?>]"
+                                   placeholder="<?php echo implode(" ", $method['params']) ?>"/>
                         <?php } ?>
                     </div>
                 </div>
@@ -1184,7 +1163,7 @@ $settings = @$_SESSION['settings'];
                     </div>
                     <div class="col-12 sm:col-9 flex align-items-center align-content-between  px-2">
                         <?php if (count($method['params']) > 0) { ?>
-                            <input type="text" class="flex-grow-1 p-1" value="" name="params[<?php echo $name ?>]" placeholder="<?php echo implode(",", $method['params']) ?>"/>
+                            <input type="text" class="flex-grow-1 p-1" value="" name="params[<?php echo $name ?>]" placeholder="<?php echo implode(" ", $method['params']) ?>"/>
                         <?php } ?>
                         <div class="flex-grow-1 px-5 white-space-normal">
                             <?php echo @$_SESSION['view_method_val'][$name] ?>

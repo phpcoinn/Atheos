@@ -1,0 +1,46 @@
+#SBRIGHT > .content {
+    overflow-y: auto;
+}
+#SBRIGHT #last_login {
+    display: none;
+}
+#SBRIGHT .if-tabs {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+#SBRIGHT .if-tabs .if-tab {
+    border-bottom: 1px solid #fff;
+    padding: 0;
+}
+#SBRIGHT .if-tabs .if-tab a {
+    margin: 0;
+    padding: 10px !important;
+    display: block !important;
+}
+#SBRIGHT .if-tabs .if-tab.sel-tab {
+    border: 1px solid #fff;
+    border-bottom: none;
+}
+#SBRIGHT #phpcoin-sb a {
+    display: revert;
+    margin: unset;
+    color: inherit;
+    padding: unset;
+}
+#workspace #ACTIVE, #workspace #BOTTOM {
+    width: auto !important;
+    min-width: 10px;
+}
+
+@media (max-width: 576px) {
+    #workspace #SBLEFT {
+        width:80vw !important;
+    }
+    #workspace #SBRIGHT {
+        width:80vw !important;
+    }
+    #workspace #ACTIVE, #workspace #BOTTOM {
+        width: auto !important;
+        min-width: 10px;
+    }
+}

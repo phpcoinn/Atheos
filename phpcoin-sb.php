@@ -31,15 +31,15 @@ $engines = [
 //		"name" => "Virtual",
 //        "NODE_URL" => "http://spectre:8000",
 //	],
-	"local" => [
-		"name" => "Local",
-		"NODE_URL" => "http://spectre:8000",
-        "atheos_url"=>"http://atheos.spectre:8000/"
-	],
-//	"testnet" => [
-//		"name" => "Testnet",
-//		"NODE_URL" => "https://node1.phpcoin.net",
+//	"local" => [
+//		"name" => "Local",
+//		"NODE_URL" => "http://spectre:8000",
+//        "atheos_url"=>"http://atheos.spectre:8000/"
 //	],
+	"testnet" => [
+		"name" => "Testnet",
+		"NODE_URL" => "https://node1.phpcoin.net",
+	],
 //	"testnet" => [
 //		"name"=>"Testnet"
 //    ],

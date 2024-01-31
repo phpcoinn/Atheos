@@ -637,7 +637,7 @@ $settings = @$_SESSION['settings'];
 		        $name = $property['name'];
 		        $type = @$property['type'];
 		        ?>
-                <div class="grid grid-nogutter">
+                <div class="grid grid-nogutter p-2 m-2 border-1">
                     <div class="col-12 sm:col-3">
                         <button type="submit" class="p-1 w-full" name="get_property_val[<?php echo $name ?>]"><?php echo $name ?></button>
                     </div>

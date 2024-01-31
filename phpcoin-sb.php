@@ -592,7 +592,7 @@ $settings = @$_SESSION['settings'];
             </div>
 	        <?php if(is_array($_SESSION['contract']['interface']['methods'])) {
                 foreach ($_SESSION['contract']['interface']['methods'] as $method) { ?>
-                <div class="grid grid-nogutter">
+                <div class="grid grid-nogutter p-2 border-1 m-2">
                     <div class="col-12 sm:col-3">
                         <button type="submit" class="p-1 w-full" data-call="<?php echo $method['name'] ?>" name="exec_method[<?php echo $method['name'] ?>]"><?php echo $method['name'] ?></button>
                     </div>
@@ -612,7 +612,7 @@ $settings = @$_SESSION['settings'];
                 foreach ($_SESSION['contract']['interface']['views'] as $method) {
 		        $name = $method['name'];
 		        ?>
-                <div class="grid grid-nogutter">
+                <div class="grid grid-nogutter p-2 m-2 border-1">
                     <div class="col-12 sm:col-3">
                         <button type="submit" class="p-1 w-full" name="view_method[<?php echo $name ?>]"><?php echo $name ?></button>
                     </div>

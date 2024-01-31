@@ -38,6 +38,7 @@ foreach ($plugins as $plugin) {
 <!--        PHPCOin - save and toggle theme-->
         <a onclick="atheos.active.saveAll();" style="display: contents"><i class="fa fa-save"></i></a>
         <a href="<?php echo $_SERVER['REQUEST_URI'] ?>?&toggleTheme" style="display: contents"><i class="fa fa-sun"></i></a>
+        <a href="" onclick="$('button[name=refresh]').click(); return false;" style="display: contents"><i class="fa fa-sync"></i></a>
 	</div>
 
 	<div class="content">

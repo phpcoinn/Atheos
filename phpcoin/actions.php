@@ -231,7 +231,7 @@ function deploy($virtual) {
 
         SmartContractEngine::$virtual = true;
         SmartContractEngine::$smartContract = $_SESSION['contract'];
-        $res = SmartContractEngine::deploy($transaction, 0, $err);
+        $res = SmartContractEngine::process($deploy_address, [$transaction], 0, false, $err);
 
         if(!$res) {
             _error('Smart contract not deployed: '.$err);

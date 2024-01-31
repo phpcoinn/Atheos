@@ -39,6 +39,7 @@ $engines = [
 	"testnet" => [
 		"name" => "Testnet",
 		"NODE_URL" => "https://node1.phpcoin.net",
+        "atheos_url"=>"https://atheos.phpcoin.net"
 	],
 //	"testnet" => [
 //		"name"=>"Testnet"
@@ -681,7 +682,7 @@ $settings = @$_SESSION['settings'];
             </thead>
             <tbody>
             <?php foreach($transactions as $ix=>$tx) {
-                if(!in_array($tx['type_value'],[TX_TYPE_SC_CREATE, TX_TYPE_SC_EXEC, TX_TYPE_SC_SEND])) continue;
+                if(!in_array($tx['type_value'],[TX_TYPE_SC_CREATE, TX_TYPE_SC_EXEC, TX_TYPE_SC_SEND]) && !$virtual) continue;
                 ?>
                 <tr>
                     <td><?php echo $virtual ? $ix : (empty($tx['block']) ? "mempool" : $tx['height']) ?></td>
@@ -770,6 +771,9 @@ $settings = @$_SESSION['settings'];
     }
     #SBLEFT {
         width: <?php echo $settings['sidebars.sb-left-width'] ?>;
+    }
+    #SBRIGHT:not(.drag) {
+        user-select: initial !important;
     }
 </style>
 

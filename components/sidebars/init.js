@@ -105,6 +105,9 @@
 
 			self.dragging = true;
 
+			//phpcoin - mark dragging
+			$(sidebar).addClass("drag")
+
 			var moveElement = function(event) {
 				if (side === 'left') {
 					width = (modalX + event.clientX + 10);
@@ -123,6 +126,9 @@
 
 				storage('sidebars.sb-' + side + '-width', width);
 				self.dragging = false;
+
+				//phpcoin - unmark dragging
+				$(sidebar).removeClass("drag")
 
 				document.removeEventListener('mousemove', moveElement, false);
 				document.removeEventListener('mouseup', removeListeners, false);

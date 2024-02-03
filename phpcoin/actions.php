@@ -322,6 +322,8 @@ function set_contract() {
             break;
         }
     }
+    unset($_SESSION['get_property_val']);
+    unset($_SESSION['get_property_val']);
     header("location: ".$_SERVER['REQUEST_URI']);
     exit;
 }
@@ -532,14 +534,19 @@ function get_property_val($virtual) {
         $mapkey = $_POST['property_key'][$property];
         $_SESSION['property_key'][$property]=$mapkey;
     }
+    unset($_SESSION['get_property_val'][$property]);
     if($virtual) {
         SmartContractEngine::$virtual = true;
         SmartContractEngine::$smartContract = $_SESSION['contract'];
         $val = SmartContractEngine::get($sc_address, $property, $mapkey);
     } else {
-        $val = api_get("/api.php?q=getSmartContractProperty&address=$sc_address&property=$property&key=$mapkey".XDEBUG);
+        $val = api_get("/api.php?q=getSmartContractProperty&address=$sc_address&property=$property&key=$mapkey", $error);
+        if($error) {
+            $_SESSION['get_property_val'][$property]['error']=$error;
+        }
     }
-    $_SESSION['get_property_val'][$property]=$val;
+    $_SESSION['get_property_val'][$property]['value']=$val;
+    $_SESSION['get_property_val'][$property]['return']=true;
     $_SESSION['interface_tab']="properties";
     header("location: ".$_SERVER['REQUEST_URI']);
     exit;
@@ -556,6 +563,7 @@ function clear_property_val() {
 function clear_view_method_val() {
     $property = array_keys($_POST['clear_view_method_val'])[0];
     unset($_SESSION['view_method_val'][$property]);
+    unset($_SESSION['params'][$property]);
     header("location: ".$_SERVER['REQUEST_URI']);
     exit;
 }

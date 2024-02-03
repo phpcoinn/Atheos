@@ -58,14 +58,16 @@ $engines = [
 //require_once ROOT . '/include/functions.inc.php';
 //require_once ROOT . '/include/dapps.functions.php';
 
-function api_get($url) {
+function api_get($url, &$error = null) {
 	$res = @file_get_contents(NODE_URL . $url);
 	$res = json_decode($res, true);
 	$status = $res['status'];
 	if($status == "ok") {
 		$data = $res['data'];
 		return $data;
-	}
+	} else {
+        $error = $res['data'];
+    }
 }
 
 function api_post($url, $data = [], $timeout = 60, $debug = false) {
@@ -527,15 +529,17 @@ $settings = @$_SESSION['settings'];
         <a target="_blank" href="<?php echo NODE_URL ?>/apps/explorer/address.php?address=<?php echo $_SESSION['contract']['address'] ?>">
             <?php echo $_SESSION['contract']['address'] ?>
         </a>
+        <br/>Name: <?php echo  $_SESSION['contract']['name'] ?>
+        <br/>Description: <p><?php echo  $_SESSION['contract']['description'] ?></p>
         <br/>Balance: <?php echo $_SESSION['contract']['balance'] ?>
             </div>
         <div class="grid if-tabs">
             <div class="col text-center if-tab <?php if(!isset($_SESSION['interface_tab']) || @$_SESSION['interface_tab']=="methods") { ?>sel-tab<?php } ?>">
-                <a href="#" style="color: #ec7474" onclick="showInterfaceTab(this,'methods'); return false">Methods</a></div>
+                <a href="#" onclick="showInterfaceTab(this,'methods'); return false">Methods</a></div>
             <div class="col text-center if-tab <?php if(@$_SESSION['interface_tab']=="views") { ?>sel-tab<?php } ?>">
-                <a href="#" style="color: #fff" onclick="showInterfaceTab(this,'views'); return false">Views</a></div>
+                <a href="#" onclick="showInterfaceTab(this,'views'); return false">Views</a></div>
             <div class="col text-center if-tab <?php if(@$_SESSION['interface_tab']=="properties") { ?>sel-tab<?php } ?>">
-                <a href="#" style="color: #fff" onclick="showInterfaceTab(this,'properties'); return false">Properties</a></div>
+                <a href="#" onclick="showInterfaceTab(this,'properties'); return false">Properties</a></div>
         </div>
 
         <div style="display: <?php if (!isset($_SESSION['interface_tab']) || $_SESSION['interface_tab']=="methods") { ?>block<?php } else { ?>none<?php } ?>" class="tab" name="methods">
@@ -618,7 +622,7 @@ $settings = @$_SESSION['settings'];
                     </div>
                     <div class="col-12 sm:col-9 flex align-items-center align-content-between  px-2">
                         <?php if (count($method['params']) > 0) { ?>
-                            <input type="text" class="flex-grow-1 p-1" value="" name="params[<?php echo $name ?>]" placeholder="<?php echo implode(" ", $method['params']) ?>"/>
+                            <input type="text" class="flex-grow-1 p-1" value="<?php echo @$_SESSION['params'][$name] ?>" name="params[<?php echo $name ?>]" placeholder="<?php echo implode(" ", $method['params']) ?>"/>
                         <?php } ?>
                         <div class="flex-grow-1 px-5 white-space-normal">
                             <?php echo @$_SESSION['view_method_val'][$name] ?>
@@ -647,9 +651,12 @@ $settings = @$_SESSION['settings'];
                                    placeholder="Key"/>
                         <?php } ?>
                         <div class="flex-grow-1 px-5">
-                            <?php echo @$_SESSION['get_property_val'][$name] ?>
+                            <?php echo @$_SESSION['get_property_val'][$name]['value'] ?>
+                            <?php if (isset($_SESSION['get_property_val'][$name]['error'])) { ?>
+                                <i class="fa fa-exclamation-triangle" style="color: red" title="<?php echo @$_SESSION['get_property_val'][$name]['error'] ?>"></i>
+                            <?php } ?>
                         </div>
-                        <?php if (isset($_SESSION['get_property_val'][$name])) { ?>
+                        <?php if (isset($_SESSION['get_property_val'][$name]['return'])) { ?>
                             <button type="submit" class="flex-shrink-1 p-1" name="clear_property_val[<?php echo $name ?>]">x</button>
                         <?php } ?>
                     </div>
@@ -682,7 +689,15 @@ $settings = @$_SESSION['settings'];
             </thead>
             <tbody>
             <?php foreach($transactions as $ix=>$tx) {
-                if(!in_array($tx['type_value'],[TX_TYPE_SC_CREATE, TX_TYPE_SC_EXEC, TX_TYPE_SC_SEND]) && !$virtual) continue;
+                if(empty($tx['block'])) {
+                    $type = $tx['type_value'];
+                } else {
+                    $type = $tx['type'];
+                }
+                if(!in_array($type,[TX_TYPE_SC_CREATE, TX_TYPE_SC_EXEC, TX_TYPE_SC_SEND]) && !$virtual) continue;
+                if($type==TX_TYPE_SC_CREATE && $tx['dst']!=$_SESSION['contract']['address']) continue;
+                if($type==TX_TYPE_SC_EXEC && $tx['dst']!=$_SESSION['contract']['address']) continue;
+                if($type==TX_TYPE_SC_SEND && $tx['src']!=$_SESSION['contract']['address']) continue;
                 ?>
                 <tr>
                     <td><?php echo $virtual ? $ix : (empty($tx['block']) ? "mempool" : $tx['height']) ?></td>

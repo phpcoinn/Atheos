@@ -100,7 +100,7 @@ ob_start()
 
     //PHPCOin - include dark theme
     if($theme!="dark") {
-	    echo("\t<link rel=\"stylesheet\" href=\"theme/custom.css\">\n");
+	    echo("\t<link rel=\"stylesheet\" href=\"phpcoin/light.css\">\n");
     }
 
 	// LOAD FONTS
@@ -118,7 +118,7 @@ ob_start()
 	?>
 </head>
 
-<body>
+<body class="<?php echo @$_SESSION['theme'] ?>">
 
 	<?php
 

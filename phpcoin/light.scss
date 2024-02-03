@@ -1,0 +1,36 @@
+:root {
+
+  --shade0: #313030;
+  --shade1: #D5D9DD;
+  --shade2: #A5A9AA;
+  --shade3: #757577;
+  --shade4: #e3e3e3;
+  --shade5: #353533;
+  --shade6: #ececec;
+  --shade7: #E8E8E8;
+  --shade8: #fff;
+  --shade9: #0b0202;
+
+}
+body.light {
+
+
+  #file-manager a:hover, #file-manager a.context-menu-active
+  {
+    background-color: #CCC;
+  }
+  span.aqua {
+    color: initial;
+  }
+  #contextmenu {
+    background-color: #ccc;
+    a:hover
+    {
+      background-color: #989898;
+    }
+  }
+  h1, h2, h3, h4
+  {
+    text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.6);
+  }
+}

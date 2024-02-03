@@ -9,7 +9,7 @@
     margin-bottom: 10px;
 }
 #SBRIGHT .if-tabs .if-tab {
-    border-bottom: 1px solid #fff;
+    border-bottom: 1px solid var(--shade0);
     padding: 0;
 }
 #SBRIGHT .if-tabs .if-tab a {
@@ -18,7 +18,7 @@
     display: block !important;
 }
 #SBRIGHT .if-tabs .if-tab.sel-tab {
-    border: 1px solid #fff;
+    border: 1px solid var(--shade0);
     border-bottom: none;
 }
 #SBRIGHT #phpcoin-sb a {
@@ -44,3 +44,4 @@
         min-width: 10px;
     }
 }
+

@@ -412,6 +412,9 @@ function exec_method($virtual) {
         if(empty($fn_address)) {
             $fn_address=$_SESSION['contract']['address'];
         }
+        if(!Account::valid($fn_address)) {
+            _error("Address is invalid");
+        }
         $type=TX_TYPE_SC_EXEC;
         $public_key = $_SESSION['account']['public_key'];
         $src=$address;
@@ -429,6 +432,9 @@ function exec_method($virtual) {
         $dst=$fn_address;
         if(empty($dst)) {
             _error('Destination address must be specified');
+        }
+        if(!Account::valid($dst)) {
+            _error("Address is invalid");
         }
         if($virtual && $dst == $src) {
             _error('Invalid destination address');

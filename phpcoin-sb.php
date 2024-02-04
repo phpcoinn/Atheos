@@ -213,17 +213,23 @@ if(isset($_SESSION['account'])) {
 	$public_key = $virtual ? $_SESSION['account']['public_key'] : api_get("/api.php?q=getPublicKey&address=$address");
 	$private_key = $virtual ? $_SESSION['account']['private_key'] : null;
     if(!$virtual) {
-        $deployedContracts = api_get("/api.php?q=getDeployedSmartContracts&address=$address");
-        $smartContract = api_get("/api.php?q=getSmartContract&address=".$_SESSION['contract']['address']);
+        $smartContract = api_get("/api.php?q=getSmartContract&address=".$address);
         if($smartContract) {
             $_SESSION['contract']=$smartContract;
             $_SESSION['contract']['status']="deployed";
         } else {
-            $txs = api_get("/api.php?q=getTransactions&address=".$_SESSION['contract']['address']);
-            if(is_array($txs)){
-                foreach ($txs as $tx) {
-                    if($tx['type_label']=="mempool" && $tx['type_value']==TX_TYPE_SC_CREATE) {
-                        $_SESSION['contract']['status']="in mempool";
+            $deployedContracts = api_get("/api.php?q=getDeployedSmartContracts&address=$address");
+            $smartContract = api_get("/api.php?q=getSmartContract&address=".$_SESSION['contract']['address']);
+            if($smartContract) {
+                $_SESSION['contract']=$smartContract;
+                $_SESSION['contract']['status']="deployed";
+            } else {
+                $txs = api_get("/api.php?q=getTransactions&address=".$_SESSION['contract']['address']);
+                if(is_array($txs)){
+                    foreach ($txs as $tx) {
+                        if($tx['type_label']=="mempool" && $tx['type_value']==TX_TYPE_SC_CREATE) {
+                            $_SESSION['contract']['status']="in mempool";
+                        }
                     }
                 }
             }
@@ -362,15 +368,18 @@ $settings = @$_SESSION['settings'];
             </div>
             <div class="col-12 sm:col-9">
                 <?php if (isset($_SESSION['account'])) { ?>
+                    <div>
                     <a target="_blank" href="<?php echo NODE_URL ?>/apps/explorer/address.php?address=<?php echo $_SESSION['account']['address'] ?>">
                         <?php echo $_SESSION['account']['address'] ?>
                     </a>
+                    </div>
                         <?php if (!empty($_SESSION['account']['account_name'])) { ?>
-                            (<?php echo $_SESSION['account']['account_name'] ?>)
+                        <div>(<?php echo $_SESSION['account']['account_name'] ?>)</div>
                         <?php } ?>
                     <input type="hidden" name="address" value="<?php echo $_SESSION['account']['address'] ?>"/>
-                    <br/>
-                    (<?php echo $balance ?>)
+                    <div>
+                        Balance: <?php echo $balance ?>
+                    </div>
                 <?php } else { ?>
                     <button name="wallet_auth" type="submit" class="p-1">Authenticate</button>
                 <?php } ?>
@@ -526,7 +535,7 @@ $settings = @$_SESSION['settings'];
             <div>
         Interface
         <br/>Smart contract:
-        <a target="_blank" href="<?php echo NODE_URL ?>/apps/explorer/address.php?address=<?php echo $_SESSION['contract']['address'] ?>">
+        <a class="block" target="_blank" href="<?php echo NODE_URL ?>/apps/explorer/smart_contract.php?id=<?php echo $_SESSION['contract']['address'] ?>">
             <?php echo $_SESSION['contract']['address'] ?>
         </a>
         <br/>Name: <?php echo  $_SESSION['contract']['name'] ?>
@@ -558,7 +567,7 @@ $settings = @$_SESSION['settings'];
                 <div class="col-12 sm:col-3">
                     Address
                 </div>
-                <div class="col-12 sm:col-9 px-2">
+                <div class="col-12 sm:col-9 px-2 flex flex-wrap">
                     <?php if($virtual) { ?>
                         <?php if (@$_SESSION['method_type']=="exec") { ?>
                             <input type="text" value="<?php echo $_SESSION['contract']['address'] ?>" class="p-1" name="fn_address" placeholder="<?php echo $_SESSION['contract']['address'] ?>"/>
@@ -574,12 +583,10 @@ $settings = @$_SESSION['settings'];
                             </select>
                         <?php } ?>
                     <?php } else { ?>
-                        <div class="grid">
-                            <input type="text" value="<?php echo @$_SESSION['fn_address'] ?>" class="p-1" style="flex: 1" name="fn_address" placeholder="<?php echo $_SESSION['contract']['address'] ?>"/>
-                            <?php if (@$_SESSION['method_type']=="send") { ?>
-                                <button type="submit" name="select_address">Select</button>
-                            <?php } ?>
-                        </div>
+                        <input type="text" value="<?php echo @$_SESSION['fn_address'] ?>" class="p-1" style="flex: 1" name="fn_address" placeholder="<?php echo $_SESSION['contract']['address'] ?>"/>
+                        <?php if (@$_SESSION['method_type']=="send") { ?>
+                            <button type="submit" name="select_address">Select</button>
+                        <?php } ?>
                     <?php } ?>
                     <?php
                     if(!empty($_SESSION['fn_address'])) {
@@ -590,7 +597,7 @@ $settings = @$_SESSION['settings'];
                 <div class="col-12 sm:col-3">
                     Amount
                 </div>
-                <div class="col-12 sm:col-9  px-2">
+                <div class="col-12 sm:col-9 px-2">
                     <input type="text" value="<?php echo @$_SESSION['amount'] ?>" class="p-1" name="amount" placeholder="Amount"/>
                 </div>
             </div>
@@ -645,13 +652,13 @@ $settings = @$_SESSION['settings'];
                     <div class="col-12 sm:col-3">
                         <button type="submit" class="p-1 w-full" name="get_property_val[<?php echo $name ?>]"><?php echo $name ?></button>
                     </div>
-                    <div class="col-12 sm:col-9 flex align-items-center align-content-between px-2">
+                    <div class="col-12 sm:col-9 flex flex-wrap align-items-center align-content-between px-2">
                         <?php if($type == "map") { ?>
                             <input type="text" class="flex-grow-1 p-1" name="property_key[<?php echo $name ?>]" value="<?php echo @$_SESSION['property_key'][$name] ?>"
                                    placeholder="Key"/>
                         <?php } ?>
                         <div class="flex-grow-1 px-5">
-                            <?php echo @$_SESSION['get_property_val'][$name]['value'] ?>
+                            <span class="word-break"><?php echo @$_SESSION['get_property_val'][$name]['value'] ?></span>
                             <?php if (isset($_SESSION['get_property_val'][$name]['error'])) { ?>
                                 <i class="fa fa-exclamation-triangle" style="color: red" title="<?php echo @$_SESSION['get_property_val'][$name]['error'] ?>"></i>
                             <?php } ?>
@@ -700,9 +707,9 @@ $settings = @$_SESSION['settings'];
                 if($type==TX_TYPE_SC_SEND && $tx['src']!=$_SESSION['contract']['address']) continue;
                 ?>
                 <tr>
-                    <td><?php echo $virtual ? $ix : (empty($tx['block']) ? "mempool" : $tx['height']) ?></td>
-                    <td><?php echo @$tx['src'] ?></td>
-                    <td><?php echo $tx['dst'] ?></td>
+                    <td><?php echo $virtual ? $ix : (empty($tx['block']) ? "mempool" : '<a href="'. NODE_URL .'/apps/explorer/tx.php?id='.$tx['id'].'" target="_blank">'.$tx['height'].'</a>') ?></td>
+                    <td><a href="<?php echo NODE_URL ?>/apps/explorer/address.php?address=<?php echo @$tx['src'] ?>" target="_blank"><?php echo @$tx['src'] ?></a></td>
+                    <td><a href="<?php echo NODE_URL ?>/apps/explorer/address.php?address=<?php echo @$tx['dst'] ?>" target="_blank"><?php echo $tx['dst'] ?></a></td>
                     <td><?php
                         if(empty($tx['block'])) {
                             $type = $tx['type_value'];
@@ -789,6 +796,10 @@ $settings = @$_SESSION['settings'];
     }
     #SBRIGHT:not(.drag) {
         user-select: initial !important;
+    }
+    .word-break{
+        word-break: break-word;
+        white-space: break-spaces;
     }
 </style>
 

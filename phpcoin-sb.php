@@ -707,7 +707,7 @@ $settings = @$_SESSION['settings'];
                 if($type==TX_TYPE_SC_SEND && $tx['src']!=$_SESSION['contract']['address']) continue;
                 ?>
                 <tr>
-                    <td><?php echo $virtual ? $ix : (empty($tx['block']) ? "mempool" : '<a href="'. NODE_URL .'/apps/explorer/tx.php?id='.$tx['id'].'" target="_blank">'.$tx['height'].'</a>') ?></td>
+                    <td><?php echo $virtual ? $ix : (empty($tx['block']) ? "<a href=\"".NODE_URL .'/apps/explorer/tx.php?id='.$tx['id']."\" target=\"_blank\">mempool</a>" : '<a href="'. NODE_URL .'/apps/explorer/tx.php?id='.$tx['id'].'" target="_blank">'.$tx['height'].'</a>') ?></td>
                     <td><a href="<?php echo NODE_URL ?>/apps/explorer/address.php?address=<?php echo @$tx['src'] ?>" target="_blank"><?php echo @$tx['src'] ?></a></td>
                     <td><a href="<?php echo NODE_URL ?>/apps/explorer/address.php?address=<?php echo @$tx['dst'] ?>" target="_blank"><?php echo $tx['dst'] ?></a></td>
                     <td><?php
@@ -724,21 +724,21 @@ $settings = @$_SESSION['settings'];
                     <td><?php echo $tx['val'] ?></td>
                     <td><?php echo $tx['fee'] ?></td>
                     <td><?php
-                        if($tx['type']==TX_TYPE_SC_CREATE) {
+                        if($type==TX_TYPE_SC_CREATE) {
                             echo "deploy";
                         }
-                        if($tx['type']==TX_TYPE_SC_EXEC || $tx['type']==TX_TYPE_SC_SEND) {
+                        if($type==TX_TYPE_SC_EXEC || $type==TX_TYPE_SC_SEND) {
                             $data = json_decode(base64_decode($tx['message']),true);
                             echo $data['method'];
                         }
                         ?>
                     </td>
                     <td><?php
-                        if($tx['type']==TX_TYPE_SC_CREATE) {
+                        if($type==TX_TYPE_SC_CREATE) {
                             $data= json_decode(base64_decode($tx['data']), true);
                             echo json_encode($data['params']);
                         }
-                        if($tx['type']==TX_TYPE_SC_EXEC || $tx['type']==TX_TYPE_SC_SEND) {
+                        if($type==TX_TYPE_SC_EXEC || $type==TX_TYPE_SC_SEND) {
                             $data = json_decode(base64_decode($tx['message']),true);
                             echo json_encode($data['params']);
                         }

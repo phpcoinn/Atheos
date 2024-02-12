@@ -110,8 +110,8 @@ if(isset($_GET['auth_data'])) {
 	$auth_data = json_decode(base64_decode($_GET['auth_data']), true);
 	if($_SESSION['auth_request_code'] == $auth_data['request_code']) {
         if(isset($_GET['login_contract'])) {
-            $_SESSION['contract']=$auth_data['account'];
-            $smartContract = api_get("/api.php?q=getSmartContract&address=".$_SESSION['contract']['address']);
+            $address=$auth_data['account']['address'];
+            $smartContract = api_get("/api.php?q=getSmartContract&address=".$address);
             $_SESSION['contract']=$smartContract;
         } else if (isset($_GET['login_new_contract'])) {
             $_SESSION['deploy_address']=$auth_data['account']['address'];
@@ -148,6 +148,7 @@ if(isset($_POST['deploy'])) deploy($virtual);
 if(isset($_POST['save'])) save();
 if(isset($_POST['set_contract'])) set_contract();
 if(isset($_POST['login_contract'])) login_contract();
+if(isset($_POST['load_contract'])) load_contract();
 if(isset($_POST['login_new_contract'])) login_new_contract();
 if(isset($_POST['exec_method'])) exec_method($virtual);
 if(isset($_POST['view_method'])) view_method($virtual);
@@ -405,7 +406,7 @@ $settings = @$_SESSION['settings'];
                         <?php } ?>
                     </select>
                     <button name="set_contract" class="p-1">Set contract</button>
-                    <button name="login_contract" class="p-1">Select contract</button>
+<!--                    <button name="login_contract" class="p-1">Select contract</button>-->
                 </div>
             </div>
             <?php if ($_SESSION['contract']['status']=="deployed") { ?>
@@ -425,6 +426,18 @@ $settings = @$_SESSION['settings'];
                     <input type="text" value="<?php echo $_SESSION['contract']['signature'] ?>" readonly/>
                 </div>
             <?php } ?>
+        </div>
+    <?php } ?>
+
+    <?php if (!$virtual) { ?>
+        <div class="grid align-items-center grid-nogutter">
+            <div class="col-12 sm:col-3">Contract:</div>
+            <div class="col-12 sm:col-7">
+                <input name="load_contract_address" type="text" value="<?php echo @$_SESSION['contract']['address'] ?>"/>
+            </div>
+            <div class="col-12 sm:col-2">
+                <button name="load_contract">Load contract</button>
+            </div>
         </div>
     <?php } ?>
 
@@ -631,7 +644,7 @@ $settings = @$_SESSION['settings'];
                         <?php if (count($method['params']) > 0) { ?>
                             <input type="text" class="flex-grow-1 p-1" value="<?php echo @$_SESSION['params'][$name] ?>" name="params[<?php echo $name ?>]" placeholder="<?php echo implode(" ", $method['params']) ?>"/>
                         <?php } ?>
-                        <div class="flex-grow-1 px-5 white-space-normal">
+                        <div class="flex-grow-1 px-5 white-space-normal word-break">
                             <?php echo @$_SESSION['view_method_val'][$name] ?>
                         </div>
                         <?php if (isset($_SESSION['view_method_val'][$name])) { ?>

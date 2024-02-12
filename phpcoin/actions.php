@@ -189,6 +189,7 @@ function deploy($virtual) {
     $txdata = base64_encode(json_encode($data));
 
     if($virtual) {
+        unset($_SESSION['transactions']);
         $signature = ec_sign($txdata, $_SESSION['account']['private_key']);
     } else if (empty($_SESSION['contract']['signature'])) {
         file_put_contents("/home/marko/web/phpcoin/node/tmp/txdata", json_encode($data));
@@ -231,6 +232,7 @@ function deploy($virtual) {
 
         SmartContractEngine::$virtual = true;
         SmartContractEngine::$smartContract = $_SESSION['contract'];
+        SmartContractEngine::cleanVirtualState($deploy_address);
         $res = SmartContractEngine::process($deploy_address, [$transaction], 0, false, $err);
 
         if(!$res) {
@@ -324,6 +326,20 @@ function set_contract() {
     }
     unset($_SESSION['get_property_val']);
     unset($_SESSION['get_property_val']);
+    header("location: ".$_SERVER['REQUEST_URI']);
+    exit;
+}
+
+function load_contract(){
+    $address=$_POST['load_contract_address'];
+    if (!Account::valid($address)){
+        _error("Address is invalid");
+    }
+    $smartContract = api_get("/api.php?q=getSmartContract&address=".$address);
+    if(!$smartContract){
+        _error("Address is not smart contract");
+    }
+    $_SESSION['contract']=$smartContract;
     header("location: ".$_SERVER['REQUEST_URI']);
     exit;
 }

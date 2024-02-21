@@ -22,6 +22,7 @@ function resetForm() {
     $_SESSION['engine'] = 'virtual';
     $_SESSION['deploy_amount'] = null;
     $_SESSION['deploy_params'] = null;
+    unset($_SESSION['debug_logs']);
     header("location: ". $_SERVER['REQUEST_URI']);
     exit;
 }
@@ -234,6 +235,8 @@ function deploy($virtual) {
         SmartContractEngine::$smartContract = $_SESSION['contract'];
         SmartContractEngine::cleanVirtualState($deploy_address);
         $res = SmartContractEngine::process($deploy_address, [$transaction], 0, false, $err);
+        $debug_logs = SmartContractEngine::$debug_logs;
+        $_SESSION['debug_logs']=array_merge($_SESSION['debug_logs'], $debug_logs);
 
         if(!$res) {
             _error('Smart contract not deployed: '.$err);
@@ -482,6 +485,8 @@ function exec_method($virtual) {
         if(!$res) {
             _error('Method can not be executed: '.$err);
         }
+        $debug_logs = SmartContractEngine::$debug_logs;
+        $_SESSION['debug_logs']=array_merge($_SESSION['debug_logs'], $debug_logs);
         $_SESSION['accounts'][$src]['balance'] = $_SESSION['accounts'][$src]['balance'] - (TX_SC_EXEC_FEE + $amount);
         $_SESSION['accounts'][$dst]['balance'] = $_SESSION['accounts'][$dst]['balance'] + $amount;
 
@@ -535,6 +540,8 @@ function view_method($virtual) {
         SmartContractEngine::$virtual = true;
         SmartContractEngine::$smartContract = $_SESSION['contract'];
         $res = SmartContractEngine::view($sc_address, $view_method, $params, $err);
+        $debug_logs = SmartContractEngine::$debug_logs;
+        $_SESSION['debug_logs']['view::'.$view_method]=$debug_logs;
     } else {
         $params = base64_encode(json_encode($params));
         $sc_address = $_SESSION['contract']['address'];
@@ -641,4 +648,10 @@ function getProjectFolder() {
         $folder = WORKSPACE . "/" . $folder;
     }
     return $folder;
+}
+
+function clear_debug_log() {
+    unset($_SESSION['debug_logs']);
+    header("location: ".$_SERVER['REQUEST_URI']);
+    exit;
 }

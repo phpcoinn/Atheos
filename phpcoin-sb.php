@@ -159,6 +159,7 @@ if(isset($_POST['wallet_auth'])) wallet_auth();
 if(isset($_POST['logout'])) logout();
 if(isset($_GET['download'])) download($virtual);
 if(isset($_POST['select_address'])) select_address();
+if(isset($_POST['clear_debug_log'])) clear_debug_log();
 
 
 
@@ -772,6 +773,12 @@ $settings = @$_SESSION['settings'];
             State:
         <pre><?php print_r($state); ?></pre>
     </div>
+    <?php if ($virtual) { ?>
+        <div class="mt-3">
+            Debug: <button name="clear_debug_log" type="submit" class="p-1">Clear</button>
+            <pre><?php print_r($_SESSION['debug_logs']); ?></pre>
+        </div>
+    <?php } ?>
 	<input type="hidden" name="msg"/>
 	<input type="hidden" name="date"/>
 </form>

@@ -1,5 +1,8 @@
 <?php
 
+//error_reporting(0);
+//ini_set('display_errors', 0);
+
 function _error($text) {
     $response = [
         "action" => "message",
@@ -156,6 +159,7 @@ function deploy($virtual) {
 
     $name=$_POST['contract_name'];
     $description=$_POST['contract_description'];
+    $metadata_str=$_POST['contract_metadata'];
 
 
     $_SESSION['deploy_params']=$_POST['deploy_params'];
@@ -165,12 +169,15 @@ function deploy($virtual) {
 
     $interface = SmartContractEngine::verifyCode($compiled_code, $error);
 
+    $metadata=json_decode($metadata_str, true);
+    $metadata['name']=$name;
+    $metadata['description']=$description;
+
     $data = [
         "code"=>$compiled_code,
         "amount"=>num($amount),
         "params"=>$deploy_params,
-        "name"=>$name,
-        "description"=>$description,
+        "metadata"=>$metadata,
         "interface"=>$interface
     ];
 
@@ -235,8 +242,8 @@ function deploy($virtual) {
         SmartContractEngine::$smartContract = $_SESSION['contract'];
         SmartContractEngine::cleanVirtualState($deploy_address);
         $res = SmartContractEngine::process($deploy_address, [$transaction], 0, false, $err);
-        $debug_logs = SmartContractEngine::$debug_logs;
-        $_SESSION['debug_logs']=array_merge($_SESSION['debug_logs'], $debug_logs);
+        $debug_logs = SmartContractEngine::$debug_logs ?? [];
+        @$_SESSION['debug_logs']=array_merge($_SESSION['debug_logs'] ?? [], $debug_logs);
 
         if(!$res) {
             _error('Smart contract not deployed: '.$err);

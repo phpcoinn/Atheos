@@ -4,7 +4,7 @@
 require_once("common.php");
 
 
-error_reporting(E_ALL^E_NOTICE);
+error_reporting(0);
 require_once '/var/www/phpcoin/include/init.inc.php';
 
 require_once __DIR__ ."/phpcoin/actions.php";
@@ -91,6 +91,19 @@ function api_post($url, $data = [], $timeout = 60, $debug = false) {
 	curl_close ($ch);
 	$res = json_decode($result, true);
 	return $res;
+}
+
+function get_params_placeholder($params) {
+    $placeholder_arr=[];
+    foreach($params as $param) {
+        $name=$param['name'];
+        if(!$param['required']) {
+            $value=$param['value'];
+            $name="[$name=$value]";
+        }
+        $placeholder_arr[]=$name;
+    }
+    return implode(" ", $placeholder_arr);
 }
 
 if(isset($_SESSION['engine'])) {
@@ -476,10 +489,6 @@ $settings = @$_SESSION['settings'];
 
         <?php if (!empty($_SESSION['contract']['phar_code'])) {
             $disabled = $_SESSION['contract']['status']=="in mempool" || $_SESSION['contract']['status']=="deployed";
-            $deploy_params=[];
-            foreach ($_SESSION['contract']['interface']['deploy']['params'] as $param) {
-                $deploy_params[]=$param['name'];
-            }
             ?>
             <hr/>
             <h4><strong>Deploy contract (<?php echo @$_SESSION['contract']['status'] ?>)</strong></h4>
@@ -494,6 +503,11 @@ $settings = @$_SESSION['settings'];
                     <input type="text" name="contract_description" value="<?php echo $_SESSION['contract']['description'] ?>" placeholder="Description"
                            <?php if($disabled) { ?>readonly<?php } ?>/>
                 </div>
+                <div class="col-12 sm:col-3">Metadata</div>
+                <div class="col-12 sm:col-9">
+                    <input type="text" name="contract_metadata" value="<?php echo $_SESSION['contract']['metadata'] ?>" placeholder="Metadata (JSON)"
+                           <?php if($disabled) { ?>readonly<?php } ?>/>
+                </div>
                 <div class="col-12 sm:col-3">Amount</div>
                 <div class="col-12 sm:col-9">
                     <input type="text" name="deploy_amount" value="<?php echo $_SESSION['contract']['deploy_amount'] ?>" placeholder="0"
@@ -502,7 +516,7 @@ $settings = @$_SESSION['settings'];
                 <div class="col-12 sm:col-3">Parameters</div>
                 <div class="col-12 sm:col-9">
                     <input type="text" name="deploy_params" value="<?php echo htmlspecialchars($_SESSION['contract']['deploy_params']) ?>"
-                           placeholder="<?php echo implode(" ", $deploy_params) ?>"
+                           placeholder="<?php echo get_params_placeholder(@$_SESSION['contract']['interface']['deploy']['params']) ?>"
                            <?php if($disabled) { ?>readonly<?php } ?>/>
                 </div>
                 <?php if(!empty($_SESSION['contract']['signature'])) { ?>
@@ -553,7 +567,8 @@ $settings = @$_SESSION['settings'];
             <?php echo $_SESSION['contract']['address'] ?>
         </a>
         <br/>Name: <?php echo  $_SESSION['contract']['name'] ?>
-        <br/>Description: <p><?php echo  $_SESSION['contract']['description'] ?></p>
+        <br/>Description: <?php echo  $_SESSION['contract']['description'] ?>
+        <br/>Metadata: <?php echo  $_SESSION['contract']['metadata'] ?>
         <br/>Balance: <?php echo $_SESSION['contract']['balance'] ?>
             </div>
         <div class="grid if-tabs">
@@ -622,9 +637,10 @@ $settings = @$_SESSION['settings'];
                         <button type="submit" class="p-1 w-full" data-call="<?php echo $method['name'] ?>" name="exec_method[<?php echo $method['name'] ?>]"><?php echo $method['name'] ?></button>
                     </div>
                     <div class="col-12 sm:col-9  px-2">
-                        <?php if (count($method['params']) > 0) { ?>
+                        <?php if (count($method['params']) > 0) {
+                            ?>
                             <input type="text" value="<?php echo htmlspecialchars(@$_SESSION['params'][$method['name']]) ?>" class="p-1" name="params[<?php echo $method['name'] ?>]"
-                                   placeholder="<?php echo implode(" ", $method['params']) ?>"/>
+                                   placeholder="<?php echo get_params_placeholder($method['params']) ?>"/>
                         <?php } ?>
                     </div>
                 </div>
@@ -643,7 +659,8 @@ $settings = @$_SESSION['settings'];
                     </div>
                     <div class="col-12 sm:col-9 flex align-items-center align-content-between  px-2">
                         <?php if (count($method['params']) > 0) { ?>
-                            <input type="text" class="flex-grow-1 p-1" value="<?php echo @$_SESSION['params'][$name] ?>" name="params[<?php echo $name ?>]" placeholder="<?php echo implode(" ", $method['params']) ?>"/>
+                            <input type="text" class="flex-grow-1 p-1" value="<?php echo @$_SESSION['params'][$name] ?>" name="params[<?php echo $name ?>]"
+                                   placeholder="<?php echo get_params_placeholder($method['params']) ?>"/>
                         <?php } ?>
                         <div class="flex-grow-1 px-5 white-space-normal word-break">
                             <?php echo @$_SESSION['view_method_val'][$name] ?>
@@ -776,7 +793,7 @@ $settings = @$_SESSION['settings'];
     <?php if ($virtual) { ?>
         <div class="mt-3">
             Debug: <button name="clear_debug_log" type="submit" class="p-1">Clear</button>
-            <pre><?php print_r($_SESSION['debug_logs']); ?></pre>
+            <pre><?php print_r(@$_SESSION['debug_logs']); ?></pre>
         </div>
     <?php } ?>
 	<input type="hidden" name="msg"/>
@@ -809,10 +826,10 @@ $settings = @$_SESSION['settings'];
 <link rel="stylesheet" href="phpcoin/style.css"/>
 <style>
     #SBRIGHT {
-        width: <?php echo $settings['sidebars.sb-right-width'] ?>;
+        width: <?php echo @$settings['sidebars.sb-right-width'] ?>;
     }
     #SBLEFT {
-        width: <?php echo $settings['sidebars.sb-left-width'] ?>;
+        width: <?php echo @$settings['sidebars.sb-left-width'] ?>;
     }
     #SBRIGHT:not(.drag) {
         user-select: initial !important;

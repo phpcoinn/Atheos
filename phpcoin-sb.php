@@ -213,8 +213,8 @@ if($virtual) {
         }
 	    $_SESSION['account']=$_SESSION['accounts'][array_keys($_SESSION['accounts'])[0]];
     }
-    if(!isset($_SESSION['sc_account'])) {
-	    $_SESSION['sc_account'] = api_get( "/api.php?q=generateAccount");
+    if(!isset($_SESSION['contract'])) {
+	    $_SESSION['contract'] = api_get( "/api.php?q=generateAccount");
     }
 }
 
@@ -316,6 +316,11 @@ asort($files);
 
 $activeUser = SESSION("user");
 $settings = @$_SESSION['settings'];
+
+
+//require_once __DIR__ ."/phpcoin/app.php";
+
+
 ?>
 
 <form id="phpcoin-sb" class="p-2" method="post" action="" onsubmit="onSubmit(event)">
@@ -443,7 +448,7 @@ $settings = @$_SESSION['settings'];
         </div>
     <?php } ?>
 
-    <?php if (!$virtual) { ?>
+    <?php if (!$virtual && false) { ?>
         <div class="grid align-items-center grid-nogutter">
             <div class="col-12 sm:col-3">Contract:</div>
             <div class="col-12 sm:col-7">
@@ -459,6 +464,27 @@ $settings = @$_SESSION['settings'];
         <hr/>
         Contract source
         <div class="grid align-items-center grid-nogutter">
+            <div class="col-12 sm:col-3">Contract address:</div>
+            <div class="col-12 sm:col-9">
+                <div class="flex">
+                    <?php if($virtual) {?>
+                        <select name="deploy_address" <?php if ($_SESSION['contract']['status']=="deployed") { ?>disabled<?php } ?>>
+                            <?php foreach($_SESSION['accounts'] as $account) { ?>
+                                <option value="<?php echo $account['address'] ?>" <?php if ($account['address']==$_SESSION['deploy_address']) { ?>selected="selected"<?php } ?>><?php echo $account['address'] ?></option>
+                            <?php } ?>
+                        </select>
+                    <?php }else {?>
+                        <input type="text" value="<?php echo @$_SESSION['deploy_address'] ?>" class="p-1"
+                               name="deploy_address" <?php if($disabled) { ?>readonly<?php } ?>>
+                        <?php if (!$disabled) { ?>
+                            <button type="button" onclick="newContractAddress()">New</button>
+                            <button type="submit" name="login_new_contract">Login</button>
+                        <?php } ?>
+                    <?php } ?>
+                </div>
+            </div>
+
+
             <div class="col-12 sm:col-3">Source:</div>
             <div class="col-12 sm:col-9">
                 <div class="flex flex-wrap">
@@ -529,25 +555,6 @@ $settings = @$_SESSION['settings'];
                         <?php //} ?>
                     </div>
                 <?php } ?>
-                <div class="col-12 sm:col-3">Contract address:</div>
-                <div class="col-12 sm:col-9">
-                    <div class="flex">
-                        <?php if($virtual) {?>
-                            <select name="deploy_address" <?php if ($_SESSION['contract']['status']=="deployed") { ?>disabled<?php } ?>>
-                                <?php foreach($_SESSION['accounts'] as $account) { ?>
-                                    <option value="<?php echo $account['address'] ?>" <?php if ($account['address']==$_SESSION['deploy_address']) { ?>selected="selected"<?php } ?>><?php echo $account['address'] ?></option>
-                                <?php } ?>
-                            </select>
-                        <?php }else {?>
-                            <input type="text" value="<?php echo @$_SESSION['deploy_address'] ?>" class="p-1"
-                                   name="deploy_address" <?php if($disabled) { ?>readonly<?php } ?>>
-                            <?php if (!$disabled) { ?>
-                                <button type="button" onclick="newContractAddress()">New</button>
-                                <button type="submit" name="login_new_contract">Login</button>
-                            <?php } ?>
-                        <?php } ?>
-                    </div>
-                </div>
                 <div class="col-12 sm:col-3"></div>
                 <div class="col-12 sm:col-9">
                 <?php if (!$disabled) { ?>

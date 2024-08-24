@@ -42,10 +42,10 @@ function compile() {
         $file = $folder."/".$file;
     }
     $_SESSION['source']=$source;
-    unset($_SESSION['contract']);
+//    unset($_SESSION['contract']);
 
     $_SESSION['contract']['phar_code']=null;
-    $res = SmartContract::compile($file, $phar_file, $err);
+    $res = SmartContract::compile($_SESSION['contract']['address'],$file, $phar_file, $err);
     if(!$res) {
         _error('Error compiling smart contract:'.$err);
     }

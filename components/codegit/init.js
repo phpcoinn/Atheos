@@ -132,7 +132,7 @@
 			if (oX('#project-root').hasClass('repo')) {
 				self.addStatusElements();
 				self.checkRepoStatus();
-
+				self.isRepo = true;
 			} else {
 				if (self.repoBanner) {
 					self.repoBanner.hide();
@@ -140,6 +140,7 @@
 				if (self.fileStatus) {
 					self.fileStatus.hide();
 				}
+				self.isRepo = false;
 			}
 		},
 
@@ -201,10 +202,8 @@
 					type: 'repo',
 					repo: anchor.path
 				},
-				settled: function(status, reply) {
-					if (status === 'success') {
-						self.addRepoIcon(anchor.path);
-					}
+				success: function(reply) {
+					self.addRepoIcon(anchor.path);
 				}
 			});
 		},
@@ -222,9 +221,9 @@
 						repoURL,
 						path: anchor.path
 					},
-					settled: function(status, reply) {
+					settled: function(reply, status) {
 						toast(status, reply);
-						if (status === 'success') {
+						if (status === 200) {
 							self.addRepoIcon(anchor.path);
 							atheos.filemanager.rescan(anchor.path);
 							atheos.modal.unload();
@@ -271,9 +270,9 @@
 			echo({
 				url: atheos.controller,
 				data: data,
-				success: function(reply) {
-					toast(reply);
-					if (reply.status !== 'error') {
+				settled: function(reply, status) {
+					toast(status, reply);
+					if (status === 200) {
 						message.empty();
 						oX('input[type="checkbox"][group="cg_overview"][parent="true"').prop('checked', false);
 						checkboxes.forEach((checkbox) => {
@@ -297,9 +296,9 @@
 					action: 'fileStatus',
 					path: path
 				},
-				settled: function(status, reply) {
+				settled: function(reply, status) {
 					var text = '';
-					if (status !== 'error') {
+					if (status === 200) {
 						text = `${self.icon}${reply.branch}: +${reply.insertions}, -${reply.deletions}`;
 					}
 					if (self.fileStatus) {
@@ -312,6 +311,10 @@
 		checkRepoStatus: function() {
 			var repo = atheos.project.current.path;
 
+			if (!self.isRepo) {
+				return;
+			}
+
 			echo({
 				url: atheos.controller,
 				data: {
@@ -319,17 +322,17 @@
 					action: 'repoStatus',
 					repo
 				},
-				settled: function(status, reply) {
-					status = 'Unknown';
-					if (reply.status !== 'error') {
-						status = reply.text;
+				settled: function(reply, status) {
+					let repoStatus = 'Unknown';
+					if (status === 200) {
+						repoStatus = reply.text;
 					}
 
 					if (self.repoStatus) {
-						self.repoStatus.text(i18n('codegit_' + status.toLowerCase()));
+						self.repoStatus.text(i18n('codegit_' + repoStatus.toLowerCase()));
 					}
 					if (self.repoBanner) {
-						self.repoBanner.replaceClass('repoCommitted repoUncommitted repoUntracked', 'repo' + status);
+						self.repoBanner.replaceClass('repoCommitted repoUncommitted repoUntracked', 'repo' + repoStatus);
 					}
 				}
 			});
@@ -409,7 +412,7 @@
 					remote,
 					branch
 				},
-				settled: function(status, reply) {
+				settled: function(reply, status) {
 					output(status, reply);
 				}
 			});

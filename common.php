@@ -21,7 +21,7 @@ require_once("traits/database.php");
 require_once("traits/helpers.php");
 require_once("traits/file.php");
 require_once("traits/path.php");
-require_once("traits/reply.php");
+require_once("traits/exchange.php");
 
 require_once("traits/i18n.php");
 
@@ -32,7 +32,7 @@ class Common {
 	use Helpers;
 	use File;
 	use Path;
-	use Reply;
+	use Exchange;
 
 	//////////////////////////////////////////////////////////////////////////80
 	// PROPERTIES
@@ -51,13 +51,13 @@ class Common {
 	public static function initialize() {
 		$path = __DIR__;
 
-		define("VERSION", "v5.0.0");
-
 		if (file_exists($path."/config.php")) require_once($path."/config.php");
 
 		if (defined("LIFETIME") && LIFETIME !== false) {
 			ini_set("session.cookie_lifetime", LIFETIME);
 		}
+		
+		define("WEBROOT", "/var/www/html/");
 
 		if (!defined("BASE_PATH")) define("BASE_PATH", $path);
 		if (!defined("COMPONENTS")) define("COMPONENTS", BASE_PATH . "/components");
@@ -71,6 +71,7 @@ class Common {
 			define("TIMEZONE", $timeZone->getName());
 		}
 		if (!defined("LANGUAGE")) define("LANGUAGE", "en");
+		if (!defined("THEME")) define("THEME", "dark blue");
 		if (!defined("DEVELOPMENT")) define("DEVELOPMENT", false);
 
 		// TIMEZONE
@@ -113,9 +114,9 @@ class Common {
 		$i18n->init();
 	}
 
-	//////////////////////////////////////////////////////////////////////////80////////80
+	//////////////////////////////////////////////////////////////////////////80
 	// Execute Command
-	//////////////////////////////////////////////////////////////////////////80////////80
+	//////////////////////////////////////////////////////////////////////////80
 	public static function execute($cmd = false) {
 		$text = false;
 		$code = 0;

@@ -30,9 +30,9 @@ if(isset($_REQUEST['toggleTheme'])) {
 }
 
 if (defined("HEADERS") && HEADERS) {
-	foreach (unserialize(HEADERS) as $val) {
-		header($val);
-	}
+    foreach (unserialize(HEADERS) as $val) {
+        header($val);
+    }
 }
 
 require_once("traits/cls.source.php");
@@ -82,21 +82,24 @@ ob_start()
 
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="en" class="<?php if (defined("THEME") && THEME) echo(THEME) ?>">
 <head>
 	<meta charset="utf-8">
 	<title><?php if (defined("DOMAIN") && DOMAIN) echo(DOMAIN . " | ") ?>Atheos IDE</title>
 	<meta name="author" content="Liam Siira">
-<!--    //PHPcoin fix for mobile screen-->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-	<meta name="description" content="A Web-Based IDE with a small footprint and minimal requirements">
-	<!-- FAVICONS -->
-	<?php
-	require_once("templates/favicons.php");
+    <!--    //PHPcoin fix for mobile screen-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">	<meta name="description" content="A Web-Based IDE with a small footprint and minimal requirements">
 
-	// Load THEME
-	echo("<!-- THEME -->\n");
-	echo("\t<link rel=\"stylesheet\" href=\"theme/main.min.css\">\n");
+    <!-- PreConnects -->
+    <link rel="preconnect" href="https://www.atheos.io">
+
+    <!-- FAVICONS -->
+    <?php
+    require_once("templates/favicons.php");
+
+    // Load THEME
+    echo("<!-- THEME -->\n");
+    echo("\t<link rel=\"stylesheet\" href=\"theme/main.min.css\">\n");
 
     //PHPCOin - include dark theme
     if($theme!="dark") {
@@ -106,98 +109,98 @@ ob_start()
 	// LOAD FONTS
 	$SourceManager->linkResource("css", "fonts", DEVELOPMENT);
 
-	// LOAD LIBRARIES
-	$SourceManager->linkResource("js", "libraries", DEVELOPMENT);
+    // LOAD LIBRARIES
+    $SourceManager->linkResource("js", "libraries", DEVELOPMENT);
 
-	// LOAD MODULES
-	$SourceManager->linkResource("js", "modules", DEVELOPMENT);
+    // LOAD MODULES
+    $SourceManager->linkResource("js", "modules", DEVELOPMENT);
 
-	// LOAD PLUGINS
-	$SourceManager->linkResource("css", "plugins", DEVELOPMENT);
+    // LOAD PLUGINS
+    $SourceManager->linkResource("css", "plugins", DEVELOPMENT);
 
-	?>
+    ?>
 </head>
 
 <body class="<?php echo @$_SESSION['theme'] ?>">
 
-	<?php
+    <?php
 
-	//////////////////////////////////////////////////////////////////
-	// LOGGED IN
-	//////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////
+    // LOGGED IN
+    //////////////////////////////////////////////////////////////////
 
-	if (SESSION("user")) {
-		?>
+    if (SESSION("user")) {
+        ?>
 
-		<div id="workspace">
-			<div id="contextmenu"></div>
+        <div id="workspace">
+            <div id="contextmenu"></div>
 
-			<?php require_once("components/sidebars/sb-left.php"); ?>
+            <?php require_once("components/sidebars/sb-left.php"); ?>
 
-			<div id="ACTIVE">
-				<ul id="active_file_tabs" class="tabList"></ul>
-				<a id="tab_dropdown" class="fas fa-chevron-circle-down"></a>
-				<a id="tab_close" class="fas fa-times-circle"></a>
-				<ul id="active_file_dropdown" style="display: none;"></ul>
-			</div>
+            <div id="ACTIVE">
+                <ul id="active_file_tabs" class="tabList"></ul>
+                <a id="tab_dropdown" class="fas fa-chevron-circle-down"></a>
+                <a id="tab_close" class="fas fa-times-circle"></a>
+                <ul id="active_file_dropdown" class="tabList" style="display: none;"></ul>
+            </div>
 
-			<div id="EDITOR">
-				<div id="root-editor-wrapper"></div>
-			</div>
+            <div id="EDITOR">
+                <div id="root-editor-wrapper"></div>
+            </div>
 
-			<div id="BOTTOM">
-				<a id="split"><i class="fas fa-columns"></i><?php echo i18n("split"); ?></a>
-				<a id="current_mode"><i class="fas fa-code"></i><span></span></a>
-				<span id="current_file"></span>
-				<span id="codegit_file_status"></span>
-				<div id="changemode_menu" style="display:none;" class="options-menu"></div>
-				<ul id="split_menu" style="display:none;" class="options-menu">
-					<li id="split-horizontally"><a><i class="fas fa-arrows-alt-h"></i><?php echo i18n("split_h"); ?> </a></li>
-					<li id="split-vertically"><a><i class="fas fa-arrows-alt-v"></i><?php echo i18n("split_v"); ?> </a></li>
-					<li id="merge-all"><a><i class="fas fa-compress-arrows-alt"></i><?php echo i18n("merge_all"); ?> </a></li>
-				</ul>
-				<span id="cursor-position"><?php echo i18n("ln"); ?>: 0 &middot; <?php echo i18n("col"); ?>: 0</span>
-			</div>
+            <div id="BOTTOM">
+                <a id="split"><i class="fas fa-columns"></i><?php echo i18n("split"); ?></a>
+                <a id="current_mode"><i class="fas fa-code"></i><span></span></a>
+                <span id="current_file"></span>
+                <span id="codegit_file_status"></span>
+                <div id="changemode_menu" style="display:none;" class="options-menu"></div>
+                <ul id="split_menu" style="display:none;" class="options-menu">
+                    <li id="split-horizontally"><a><i class="fas fa-arrows-alt-h"></i><?php echo i18n("split_h"); ?> </a></li>
+                    <li id="split-vertically"><a><i class="fas fa-arrows-alt-v"></i><?php echo i18n("split_v"); ?> </a></li>
+                    <li id="merge-all"><a><i class="fas fa-compress-arrows-alt"></i><?php echo i18n("merge_all"); ?> </a></li>
+                </ul>
+                <span id="cursor-position"><?php echo i18n("ln"); ?>: 0 &middot; <?php echo i18n("col"); ?>: 0</span>
+            </div>
 
-			<?php require_once("components/sidebars/sb-right.php"); ?>
+            <?php require_once("components/sidebars/sb-right.php"); ?>
 
-		</div>
+        </div>
 
 
-		<iframe id="download" title="download"></iframe>
+        <iframe id="download" title="download"></iframe>
 
-		<!-- ACE -->
-		<script src="components/editor/ace-editor/ace.js"></script>
-		<script src="components/editor/ace-editor/ext-language_tools.js"></script>
-		<script src="components/editor/ace-editor/ext-beautify.js"></script>
+        <!-- ACE -->
+        <script src="components/editor/ace-editor/ace.js"></script>
+        <script src="components/editor/ace-editor/ext-language_tools.js"></script>
+        <script src="components/editor/ace-editor/ext-beautify.js"></script>
 
-		<?php
-		// LOAD COMPONENTS
-		echo("\n");
-		$SourceManager->linkResource("js", "components", DEVELOPMENT);
+        <?php
+        // LOAD COMPONENTS
+        echo("\n");
+        $SourceManager->linkResource("js", "components", DEVELOPMENT);
 
-		// LOAD PLUGINS
-		$SourceManager->linkResource("js", "plugins", DEVELOPMENT);
+        // LOAD PLUGINS
+        $SourceManager->linkResource("js", "plugins", DEVELOPMENT);
 
-	} else {
-	    // If constant DATA defined in config.php, use it. Otherwise fall back to default folder location
-	    $path = defined("DATA") ? DATA . "/" : __DIR__ . "/data/";
+    } else {
+        // If constant DATA defined in config.php, use it. Otherwise fall back to default folder location
+        $path = defined("DATA") ? DATA . "/" : __DIR__ . "/data/";
 
-		$users = file_exists($path . "users.json");
-		$projects = file_exists($path . "projects.json");
+        $users = file_exists($path . "users.json");
+        $projects = file_exists($path . "projects.json");
 
-		if (!$users && !$projects) {
-			// Installer
-			require_once("components/install/view.php");
-		} else {
-			// Login form
-			require_once("components/user/login.php");
-		}
-	}
+        if (!$users && !$projects) {
+            // Installer
+            require_once("components/install/view.php");
+        } else {
+            // Login form
+            require_once("components/user/login.php");
+        }
+    }
 
-	?>
-	<overlay class=""></overlay>
-	<toaster></toaster>
-	<output></output>
+    ?>
+    <overlay class=""></overlay>
+    <toaster></toaster>
+    <output></output>
 </body>
 </html>

@@ -198,7 +198,7 @@ class ContextMenu {
 			$temp[] = $item;
 		}
 
-		Common::send("success", array(
+		Common::send(200, array(
 			"fileMenu" => $temp,
 			"tabMenu" => $this->tabMenu
 		));

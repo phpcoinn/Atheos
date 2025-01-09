@@ -29,7 +29,7 @@ class Settings {
 	//////////////////////////////////////////////////////////////////////////80
 	public function __construct($activeUser) {
 		$this->activeUser = $activeUser;
-		$this->db = Common::getKeyStore("settings", $activeUser);
+		$this->db = Common::getKeyStore("settings", "users/" . $activeUser);
 	}
 
 	//////////////////////////////////////////////////////////////////////////80
@@ -39,9 +39,9 @@ class Settings {
         //PHPCoin - settings in session
 		$settings = $_SESSION['settings'];
 		if (!empty($settings)) {
-			Common::send("success", $settings);
+			Common::send(200, $settings);
 		} else {
-			Common::send("error", "Settings for user not found.");
+			Common::send(404, "Settings for user not found.");
 		}
 	}
 

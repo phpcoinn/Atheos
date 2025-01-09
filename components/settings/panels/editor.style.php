@@ -1,4 +1,4 @@
-<label><i class="fas fa-home"></i><?php echo i18n("settings_editor"); ?></label>
+<label><i class="fas fa-palette"></i><?php echo i18n("editor_style"); ?></label>
 
 <table>
 	<tr>
@@ -67,6 +67,17 @@
 		</td>
 	</tr>
 	<tr>
+		<td><?php echo i18n("wrap"); ?></td>
+		<td>
+			<toggle>
+				<input id="editor_lineWrap_true" data-setting="editor.useWrapMode" value="true" name="editor.useWrapMode" type="radio" />
+				<label for="editor_lineWrap_true"><?php echo i18n("enabled"); ?></label>
+				<input id="editor_lineWrap_false" data-setting="editor.useWrapMode" value="false" name="editor.useWrapMode" type="radio" checked />
+				<label for="editor_lineWrap_false"><?php echo i18n("disabled"); ?></label>
+			</toggle>
+		</td>
+	</tr>
+	<tr>
 		<td><?php echo i18n("printMarginShow"); ?></td>
 		<td>
 			<toggle>
@@ -105,6 +116,17 @@
 		</td>
 	</tr>
 	<tr>
+		<td><?php echo i18n("showInvisibles"); ?></td>
+		<td>
+			<toggle>
+				<input id="editor_showInvisibles_true" data-setting="editor.showInvisibles" value="true" name="editor.showInvisibles" type="radio" />
+				<label for="editor_showInvisibles_true"><?php echo i18n("enabled"); ?></label>
+				<input id="editor_showInvisibles_false" data-setting="editor.showInvisibles" value="false" name="editor.showInvisibles" type="radio" checked/>
+				<label for="editor_showInvisibles_false"><?php echo i18n("disabled"); ?></label>
+			</toggle>
+		</td>
+	</tr>	
+	<tr>
 		<td><?php echo i18n("foldWidgets"); ?></td>
 		<td>
 			<toggle>
@@ -113,42 +135,6 @@
 				<input id="editor_showFoldWidgets_false" data-setting="editor.showFoldWidgets" value="false" name="editor.showFoldWidgets" type="radio" checked />
 				<label for="editor_showFoldWidgets_false"><?php echo i18n("disabled"); ?></label>
 			</toggle>
-		</td>
-	</tr>
-	<tr>
-		<td><?php echo i18n("wrap"); ?></td>
-		<td>
-			<toggle>
-				<input id="editor_wrapMode_true" data-setting="editor.useWrapMode" value="true" name="editor.useWrapMode" type="radio" />
-				<label for="editor_wrapMode_true"><?php echo i18n("enabled"); ?></label>
-				<input id="editor_wrapMode_false" data-setting="editor.useWrapMode" value="false" name="editor.useWrapMode" type="radio" checked />
-				<label for="editor_wrapMode_false"><?php echo i18n("disabled"); ?></label>
-			</toggle>
-		</td>
-	</tr>
-	<tr>
-		<td><?php echo i18n("tabs_soft"); ?></td>
-		<td>
-			<toggle>
-				<input id="editor_softTabs_true" data-setting="editor.useSoftTabs" value="true" name="editor.useSoftTabs" type="radio" />
-				<label for="editor_softTabs_true"><?php echo i18n("enabled"); ?></label>
-				<input id="editor_softTabs_false" data-setting="editor.useSoftTabs" value="false" name="editor.useSoftTabs" type="radio" checked />
-				<label for="editor_softTabs_false"><?php echo i18n("disabled"); ?></label>
-			</toggle>
-		</td>
-	</tr>
-	<tr>
-		<td><?php echo i18n("tabs_size"); ?></td>
-		<td>
-			<select class="setting" data-setting="editor.tabSize">
-				<option value="2">2</option>
-				<option value="3">3</option>
-				<option value="4" selected>4</option>
-				<option value="5">5</option>
-				<option value="6">6</option>
-				<option value="7">7</option>
-				<option value="8">8</option>
-			</select>
 		</td>
 	</tr>
 </table>

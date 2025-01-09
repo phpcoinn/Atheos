@@ -23,11 +23,9 @@
 					target: 'settings',
 					action: 'load',
 				},
-				settled: function(status, reply) {
-					if (status === 'success') {
-						for (var key in reply) {
-							storage(key, reply[key]);
-						}
+				success: function(reply, status) {
+					for (var key in reply) {
+						storage(key, reply[key]);
 					}
 					carbon.publish('settings.loaded', reply);
 				}
@@ -131,9 +129,23 @@
 				case 'editor.displayIndentGuides':
 					atheos.editor.setDisplayIndentGuides(value);
 					break;
-
+				case 'editor.showInvisibles':
+					atheos.editor.setShowInvisibles(value);
+					break;
 				case 'editor.showFoldWidgets':
 					atheos.editor.setShowFoldWidgets(value);
+					break;
+				case 'editor.enableAutoClose':
+					atheos.editor.setAutoClose(value);
+					break;
+				case 'editor.enableBasicAutocomplete':
+					atheos.editor.setBasicAutocomplete(value);
+					break;
+				case 'editor.enableLiveAutocomplete':
+					atheos.editor.setLiveAutocomplete(value);
+					break;
+				case 'editor.enableSnippets':
+					atheos.editor.setSnippets(value);
 					break;
 				case 'editor.useWrapMode':
 					atheos.editor.setUseWrapMode(value);
@@ -144,7 +156,6 @@
 				case 'editor.tabSize':
 					atheos.editor.setTabSize(value);
 					break;
-
 				case 'filemanager.showHidden':
 					if (atheos.filemanager.showHidden !== boolean) {
 						atheos.filemanager.showHidden = boolean;
@@ -200,8 +211,8 @@
 					key,
 					value
 				},
-				settled: function(status, reply) {
-					if (status !== 'success') toast(status, reply);
+				settled: function(reply, status) {
+					if (status !== 200) toast(status, reply);
 					if (hidden) return;
 					// self.displayStatus(reply);
 					toast(status, 'Setting "' + key + '" saved.');
@@ -243,9 +254,9 @@
 					key,
 					value
 				},
-				success: function(reply) {
-					if (reply.status === 'error') {
-						atheos.toast.show(reply);
+				settled: function(reply, status) {
+					if (status !== 200) {
+						atheos.toast.show(status, reply);
 					} else if (!hidden) {
 						reply.text = 'Setting "' + key + '" saved.';
 						self.displayStatus(reply);

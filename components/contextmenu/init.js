@@ -14,7 +14,6 @@
 // cached.
 //												- Liam Siira
 //////////////////////////////////////////////////////////////////////////////80
-
 (function() {
 	'use strict';
 
@@ -35,11 +34,11 @@
 					target: 'contextmenu',
 					action: 'loadMenus'
 				},
-				settled: function(status, reply) {
-					if (status !== 'success') return;
+				settled: function(reply, status) {
+					if (status !== 200) return;
 					// self.createFileMenu(reply.fileMenu);
-					self.fileMenu = reply.fileMenu;
-					self.tabMenu = reply.tabMenu;
+					self.fileMenu = (typeof reply.fileMenu !== 'undefined') ? reply.fileMenu : {};
+					self.tabMenu = (typeof reply.tabMenu !== 'undefined') ? reply.fileMenu : {};
 
 					carbon.publish('contextmenu.requestItems');
 				}
@@ -58,6 +57,8 @@
 				self.show(e);
 				menu.addClass('fm');
 			});
+
+			self.initTouchEvents();
 
 			fX('#ACTIVE').on('contextmenu', function(e) { // Context Menu
 				e.preventDefault();
@@ -88,6 +89,12 @@
 					action(self.active, target);
 					self.hide();
 				}
+			});
+
+			// Hide on click for active tabs
+			fX('#contextmenu.at').on('click', function(e) {
+				e.preventDefault();
+				self.hide();
 			});
 
 			// Keep the contextmenu open if the mouse only leaves for a second
@@ -184,7 +191,7 @@
 				type = anchor.attr('data-type'),
 				name = anchor.find('span').html();
 
-			var html = '<a id="reload_file"><i class="fas fa-sync-alt"></i>Reload</a><a id="reset_file"><i class="fas fa-sync-alt"></i>Reset</a>';
+			var html = '<a id="auxSaveFile"><i class="fas fa-save"></i>Save</a><a id="auxReloadFile"><i class="fas fa-sync-alt"></i>Reload</a><a id="auxResetFile"><i class="fas fa-sync-alt"></i>Reset</a>';
 
 			self.active = {
 				path,
@@ -203,7 +210,7 @@
 			carbon.publish('contextmenu.showTabMenu');
 
 		},
-		
+
 		//////////////////////////////////////////////////////////////////////80
 		// Show Context Menu
 		//////////////////////////////////////////////////////////////////////80
@@ -234,6 +241,38 @@
 			menu.hide();
 			self.active = false;
 			carbon.publish('contextmenu.hide');
+		},
+
+		//////////////////////////////////////////////////////////////////////80
+		// Initialize touch events
+		//////////////////////////////////////////////////////////////////////80
+		initTouchEvents: function() {
+			let touchTimer;
+
+			function showContextMenu(e) {
+				e.preventDefault();
+
+				const touch = e.changedTouches[0];
+				const contextMenuEvent = new MouseEvent('contextmenu', {
+					bubbles: true,
+					cancelable: true,
+					view: window,
+					clientX: touch.clientX,
+					clientY: touch.clientY
+				});
+
+				touch.target.dispatchEvent(contextMenuEvent);
+			}
+
+			document.addEventListener('touchstart', (e) => {
+				touchTimer = setTimeout(() => {
+					showContextMenu(e);
+				}, 500); // milliseconds before opening context menu
+			});
+
+			document.addEventListener('touchend', (e) => {
+				clearTimeout(touchTimer);
+			});
 		}
 	};
 

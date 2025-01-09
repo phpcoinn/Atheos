@@ -232,7 +232,7 @@
 					callback.call(this);
 				}
 			} else {
-				this.scriptCache.push(url);
+				node.scriptCache.push(url);
 
 				var script = document.createElement('script');
 				script.type = 'text/javascript';

@@ -4,7 +4,7 @@
 trait Settings {
 
 	public function settings($repo, $data = false) {
-		$db = Common::getObjStore("codegit", $this->activeUser);
+		$db = Common::getObjStore("codegit", "users/" . $this->activeUser);
 		$activeUser = SESSION("user");
 
 		$results = $db->select("*");
@@ -19,6 +19,7 @@ trait Settings {
 				}
 			}
 
+			// FIXME: could be a race between different users
 			if (isset($settings["local"])) {
 				$this->execute("git config user.name '" . $settings["local"]["name"] . "'");
 				$this->execute("git config user.email '" . $settings["local"]["email"] . "'");

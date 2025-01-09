@@ -270,7 +270,7 @@ if(isset($_SESSION['contract'])) {
     $interface = false;
     if($virtual) {
         SmartContractEngine::$virtual = true;
-        SmartContractEngine::$smartContract = @$_SESSION['contract'];
+        SmartContractEngine::$smartContracts[$smartContract['address']] = @$_SESSION['contract'];
         if(isset($_SESSION['contract']['interface'])) {
             $interface = $_SESSION['contract']['interface'];
         }

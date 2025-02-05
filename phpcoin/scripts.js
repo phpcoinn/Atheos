@@ -13,7 +13,7 @@ function onSubmit(event) {
             formData: formData,
             ajax: true
         },
-        settled: function(status, reply) {
+        settled: function(reply, status) {
 
             if(reply.startsWith('json:')) {
                 let json = reply.substring(5);

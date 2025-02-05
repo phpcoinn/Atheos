@@ -8,17 +8,23 @@
   --shade6: #ececec;
   --shade7: #E8E8E8;
   --shade8: #fff;
-  --shade9: #0b0202; }
+  --shade9: #0b0202;
+}
 
 body.light #file-manager a:hover, body.light #file-manager a.context-menu-active {
-  background-color: #CCC; }
+  background-color: #CCC;
+}
 body.light span.aqua {
-  color: initial; }
+  color: initial;
+}
 body.light #contextmenu {
-  background-color: #ccc; }
-  body.light #contextmenu a:hover {
-    background-color: #989898; }
+  background-color: #ccc;
+}
+body.light #contextmenu a:hover {
+  background-color: #989898;
+}
 body.light h1, body.light h2, body.light h3, body.light h4 {
-  text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.6); }
+  text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.6);
+}
 
 /*# sourceMappingURL=light.css.map */

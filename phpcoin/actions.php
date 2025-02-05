@@ -50,7 +50,7 @@ function compile() {
         _error('Error compiling smart contract:'.$err);
     }
     $code=base64_encode(file_get_contents($phar_file));
-    $interface = SmartContractEngine::verifyCode($code, $error);
+    $interface = SmartContractEngine::verifyCode($code, $error, $_SESSION['contract']['address']);
     if(!$interface) {
         _error("Error verify smart contract:\n".$error);
 
@@ -167,7 +167,7 @@ function deploy($virtual) {
 
     $deploy_params = SmartContractEngine::parseCmdLineArgs($post_deploy_params);
 
-    $interface = SmartContractEngine::verifyCode($compiled_code, $error);
+    $interface = SmartContractEngine::verifyCode($compiled_code, $error, $deploy_address);
 
     $metadata=json_decode($metadata_str, true);
     $metadata['name']=$name;
@@ -239,7 +239,7 @@ function deploy($virtual) {
         $hash = $transaction->hash();
 
         SmartContractEngine::$virtual = true;
-        SmartContractEngine::$smartContract = $_SESSION['contract'];
+        SmartContractEngine::$smartContracts[$_SESSION['contract']['address']] = $_SESSION['contract'];
         SmartContractEngine::cleanVirtualState($deploy_address);
         $res = SmartContractEngine::process($deploy_address, [$transaction], 0, false, $err);
         $debug_logs = SmartContractEngine::$debug_logs ?? [];
@@ -486,7 +486,7 @@ function exec_method($virtual) {
         $hash = $transaction->hash();
 
         SmartContractEngine::$virtual = true;
-        SmartContractEngine::$smartContract = $_SESSION['contract'];
+        SmartContractEngine::$smartContracts[$_SESSION['contract']['address']] = $_SESSION['contract'];
 
         $res = SmartContractEngine::process($_SESSION['contract']['address'], [$transaction], count($_SESSION['transactions']), false, $err);
         if(!$res) {

@@ -29,7 +29,7 @@ $settings = @$_SESSION['settings'];
             <div class="col-12 sm:col-3">
                 Wallet address:
             </div>
-            <div class="col-6 sm:col-5">
+            <div class="col-12 sm:col-5">
                 <select v-model="wallet" @change="changeAccount" class="m-0 p-1">
                     <template v-for="account in Object.values(accounts)">
                         <option :value="account">
@@ -40,7 +40,7 @@ $settings = @$_SESSION['settings'];
                 <br/>
                 {{wallet && wallet.address}}
             </div>
-            <div class="col-6 sm:col-4 flex align-items-center">
+            <div class="col-12 sm:col-4 flex align-items-center">
                 <div class="flex-grow-1 px-2" v-if="wallet">
                     Balance:
                     {{wallet.balance}}
@@ -54,7 +54,7 @@ $settings = @$_SESSION['settings'];
             <div class="col-12 sm:col-3">
                 Wallet address:
             </div>
-            <div class="col-6 sm:col-9">
+            <div class="col-12 sm:col-9">
                 <div v-if="!wallet" class="">
                     <button type="button" @click="loginWallet" class="p-1" v-if="!wallet">Login</button>
                 </div>
@@ -78,10 +78,10 @@ $settings = @$_SESSION['settings'];
                 Contract address:
             </div>
             <template v-if="virtual">
-                <div class="col-6 sm:col-5 flex align-items-center">
+                <div class="col-12 sm:col-5 flex align-items-center">
                     <input type="text" v-if="contractWallet" v-model="contractWallet.address" class="m-0"/>
                 </div>
-                <div class="col-6 sm:col-4 flex align-items-center">
+                <div class="col-12 sm:col-4 flex align-items-center">
                     <div class="flex-grow-1 px-2" v-if="contractWallet">
                         Balance:
                         {{accounts[this.contractWallet.address].balance}}
@@ -90,7 +90,7 @@ $settings = @$_SESSION['settings'];
                 </div>
             </template>
             <template v-else>
-                <div class="col-6 sm:col-9 flex align-items-center">
+                <div class="col-12 sm:col-9 flex align-items-center">
                     <template v-if="contractWallet">
                         <div>
                             <a :href="`${node}/apps/explorer/address.php?address=${contractWallet.address}`">
@@ -239,7 +239,7 @@ $settings = @$_SESSION['settings'];
                     <div class="col-12 sm:col-3 p-1">Address:</div>
                     <div class="col-12 sm:col-9 p-1">
                         <input type="text" v-model="methodAddress" class="m-0 p-1"  readonly v-if="methodType === 'exec'"/>
-                        <div class="flex" style="gap: 5px" v-if="methodType === 'send'">
+                        <div class="flex flex-wrap" style="gap: 5px" v-if="methodType === 'send'">
                             <select v-model="sendAddress" class="m-0 p-1">
                                 <template v-for="account in Object.values(accounts)">
                                     <option :value="account.address">
@@ -300,7 +300,7 @@ $settings = @$_SESSION['settings'];
                                 </div>
                             </template>
                         </div>
-                        <div class="col-12 sm:col-3 p-1 flex align-items-center flex-wrap" v-if="viewResponses[view.name]">
+                        <div class="col-12 sm:col-3 p-1 flex align-items-center flex-wrap" v-if="viewResponses[view.name]!==null">
                             <div class="flex-1" style="white-space: nowrap; overflow: auto">{{viewResponses[view.name]}}</div>
                             <button @click="delete viewResponses[view.name]" class="p-1">Clear</button>
                         </div>
@@ -316,7 +316,7 @@ $settings = @$_SESSION['settings'];
                         <div  class="col-12 sm:col-3 p-1" v-if="property.type === 'map'">
                             <input type="text" v-model="propertyKeys[property.name]" class="m-0 p-1"/>
                         </div>
-                        <div class="col-12 sm:col-6 p-1 flex align-items-center" v-if="propertyValues[property.name]">
+                        <div class="col-12 sm:col-6 p-1 flex flex-wrap align-items-center" v-if="propertyValues[property.name]!==null">
                             <div class="flex-1">{{propertyValues[property.name]}}</div>
                             <button @click="delete propertyValues[property.name]" class="p-1 m-0">Clear</button>
                         </div>
@@ -383,6 +383,7 @@ $settings = @$_SESSION['settings'];
         </div>
     </div>
     <div class="border-1 mx-2 mb-2" v-if="outTab === 2">
+        <div style="width:100%; overflow: auto">
         <table>
             <tr v-for="(val, key) in state">
                 <td>{{key}}</td>
@@ -401,6 +402,7 @@ $settings = @$_SESSION['settings'];
                 </td>
             </tr>
         </table>
+        </div>
     </div>
     <div class="border-1 mx-2 mb-2 p-2" v-if="outTab === 3">
         {{debug_logs}}

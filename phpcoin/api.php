@@ -24,13 +24,13 @@ $engines = [
         "atheos_url"=>"https://atheos.phpcoin.net",
         "chainId" => "01"
     ],
-    "local"=>[
-        "name"=>"local",
-        "title" => "Local",
-        "node" => "http://phpcoin",
-        "atheos_url"=>"http://phpcoin:90",
-        "chainId" => "01"
-    ],
+//    "local"=>[
+//        "name"=>"local",
+//        "title" => "Local",
+//        "node" => "http://phpcoin",
+//        "atheos_url"=>"http://phpcoin:90",
+//        "chainId" => "01"
+//    ],
 ];
 
 function api_get($url, &$error = null) {
@@ -99,7 +99,7 @@ if($q == "load") {
         "transactions"=>$virtual ? $_SESSION["transactions"] ?? [] : $transactions,
         "state"=>SmartContractEngine::getState($_SESSION['contract']['address']),
         "debug_logs"=>$_SESSION['debug_logs'],
-        "deployParams"=>$_SESSION["deployParams"] ?? [[]],
+        "deployParams"=>$_SESSION["deployParams"] ?? [],
     ];
     api_echo($res);
 }
@@ -134,6 +134,7 @@ if($q=="reset") {
     $_SESSION['contract']=null;
     $_SESSION['transactions']=[];
     $_SESSION['debug_logs']=[];
+    $_SESSION["deployParams"]=[];
     api_echo(true);
 }
 if($q == "generateScWallet") {
@@ -200,6 +201,7 @@ if($q=="signDeploy") {
     $description=$contactData['description'];
     $metadata_str=$contactData['metadata'];
     $deployParams = $data['deployParams'];
+    $_SESSION['deployParams']=$deployParams;
 
     $engine = $_SESSION['engine'];
     $node = $engine['node'];
@@ -250,7 +252,6 @@ if($q=="signDeploy") {
     $_SESSION['contract']['amount'] = $contactData['amount'];
     $_SESSION['contract']['code']=$txdata;
     $_SESSION['contract']['txdata']=$txdata;
-    $_SESSION['deployParams']=$deployParams;
     api_echo($_SESSION['contract']);
 }
 if($q === "deploy") {

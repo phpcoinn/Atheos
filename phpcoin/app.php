@@ -17,7 +17,7 @@ $settings = @$_SESSION['settings'];
         <div class="col-12 sm:col-3">Engine:</div>
         <div class="col-12 sm:col-9">
             <select class="m-0 p-1" v-model="engine" @change="changeEngine">
-                <template v-for="e in engines" :key="k">
+                <template v-for="(e,k) in engines" :key="k">
                     <option :value="e">{{e.title}}</option>
                 </template>
             </select>
@@ -30,15 +30,16 @@ $settings = @$_SESSION['settings'];
                 Wallet address:
             </div>
             <div class="col-12 sm:col-5">
-                <select v-model="wallet" @change="changeAccount" class="m-0 p-1">
-                    <template v-for="account in Object.values(accounts)">
-                        <option :value="account">
-                            {{account.address}}
-                        </option>
-                    </template>
-                </select>
-                <br/>
-                {{wallet && wallet.address}}
+                <div class="flex align-items-center">
+                    <select v-model="wallet" @change="changeAccount" class="m-0 p-1">
+                        <template v-for="account in Object.values(accounts)">
+                            <option :value="account">
+                                {{account.address}}
+                            </option>
+                        </template>
+                    </select>
+                    <div class="fa fa-copy ml-2 cursor-pointer" v-if="wallet" title="Copy address" @click="copyToClipboard(wallet.address)"></div>
+                </div>
             </div>
             <div class="col-12 sm:col-4 flex align-items-center">
                 <div class="flex-grow-1 px-2" v-if="wallet">
@@ -91,7 +92,7 @@ $settings = @$_SESSION['settings'];
             </template>
             <template v-else>
                 <div class="col-12 sm:col-9 flex align-items-center">
-                    <template v-if="contractWallet">
+                    <div v-if="contractWallet" class="row">
                         <div>
                             <a :href="`${node}/apps/explorer/address.php?address=${contractWallet.address}`">
                                 {{contractWallet.address}}
@@ -101,10 +102,17 @@ $settings = @$_SESSION['settings'];
                             Balance: {{contractWallet.balance}}
                         </div>
                         <button type="button" @click="logoutScWallet" class="p-1">Logout</button>
-                    </template>
-                    <template v-else>
+                        <button type="button" @click="connectScWallet" class="p-1">Connect</button>
+                    </div>
+                    <div v-else class="row">
                         <button type="button" @click="loginScWallet" class="p-1">Login</button>
-                    </template>
+                        <button v-if="!connectSc" type="button" @click="connectSc=true" class="p-1">Connect</button>
+                        <div class="grid p-2" v-if="connectSc">
+                            <input type="text" v-model="connectScAddress"/>
+                            <button type="button" @click="connectScWallet" class="p-1">Connect</button>
+                            <button type="button" @click="connectSc=false" class="p-1">Cancel</button>
+                        </div>
+                    </div>
                 </div>
             </template>
         </div>
@@ -126,18 +134,22 @@ $settings = @$_SESSION['settings'];
             <div class="col-12 sm:col-3"></div>
             <div class="col-12 sm:col-9 flex">
                 <button @click="compile" class="p-1">Compile</button>
+                <button v-if="virtual" @click="compileAndDeploy" class="p-1">Compile and deploy</button>
             </div>
         </div>
 
-        <div class="grid align-items-start m-0" v-if="contract.status === 'compiled'">
+        <div class="grid align-items-start m-0" v-if="contract.status === 'compiled' || contract.status === 'deployed'">
             <div class="col-12 sm:col-3">
                 <div>Compiled code:</div>
                 <div>
-                    <button @click="getSource" class="p-1 w-auto">Source</button>
+                    <button @click="getSource" class="p-1 w-auto">Download source</button>
+                </div>
+                <div>
+                    <button @click="sourceToEditor" class="p-1 w-auto">Source &gt; Editor</button>
                 </div>
             </div>
             <div class="col-12 sm:col-9 flex">
-                <textarea v-if="contract.phar_code" class="p-1 m-0">{{contract.phar_code}}</textarea>
+                <textarea v-if="contract.phar_code" readonly class="p-1 m-0">{{contract.phar_code}}</textarea>
             </div>
         </div>
 
@@ -337,6 +349,7 @@ $settings = @$_SESSION['settings'];
         </div>
     </div>
     <div class="border-1 mx-2 mb-2" v-if="outTab === 1">
+        <button @click.prevent="refreshTxs">Refresh</button>
         <div style="overflow-x: auto; scrollbar-color: auto; scrollbar-width: auto; max-height: 30vh;">
             <table class="table table-striped table-condensed">
                 <thead>
@@ -383,6 +396,7 @@ $settings = @$_SESSION['settings'];
         </div>
     </div>
     <div class="border-1 mx-2 mb-2" v-if="outTab === 2">
+        <button @click.prevent="clearState" v-if="virtual">Clear</button>
         <div style="width:100%; overflow: auto">
         <table>
             <tr v-for="(val, key) in state">
@@ -405,7 +419,12 @@ $settings = @$_SESSION['settings'];
         </div>
     </div>
     <div class="border-1 mx-2 mb-2 p-2" v-if="outTab === 3">
-        {{debug_logs}}
+        <button @click.prevent="clearLog" v-if="virtual">Clear</button>
+        <div style="overflow-x: auto; scrollbar-color: auto; scrollbar-width: auto; max-height: 30vh;">
+        <div v-for="l in debug_logs">
+          {{l}}
+        </div>
+        </div>
     </div>
 
 </div>

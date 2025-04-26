@@ -45,6 +45,19 @@ function api_get($url, &$error = null) {
     }
 }
 
+function getTxs($address) {
+    global $db;
+    $sql='select * from (select id, block, height, src, dst, val, fee, signature, type, message, date, public_key, data
+               from transactions t where (t.src = ? or t.dst = ?) and t.type in (5,6,7)
+                union all 
+               (select id, null as block, height, src, dst, val, fee, signature, type, message, date, public_key, data
+                from mempool t where (t.src = ? or t.dst = ?) and t.type in (5,6,7))) as txs
+                order by txs.height desc';
+    $transactions = $db->run($sql,
+        [$address,$address,$address,$address],false);
+    return $transactions;
+}
+
 $input = file_get_contents("php://input");
 $data = json_decode($input, true);
 
@@ -86,7 +99,7 @@ if($q == "load") {
         if(!empty($_SESSION['contractWallet'])) {
             $_SESSION['contractWallet']['balance'] = Account::getBalance($_SESSION['contractWallet']['address']);
         }
-        $transactions = Transaction::getByAddress($_SESSION['wallet']['address'],10, 0);
+        $transactions = getTxs($_SESSION['wallet']['address']);
     }
     $res = [
         "engines" => $engines,
@@ -171,16 +184,65 @@ if($q == "compile") {
     $_SESSION['contract']['status']='compiled';
     api_echo($_SESSION['contract']);
 }
+if($q=="connectScWallet") {
+    $address = $data['address'];
+    if(empty($address)) {
+        $address = $_SESSION['contract']['address'];
+    }
+    if(empty($address)) {
+        api_err("Empty address");
+    }
+    if(!Account::valid($address)) {
+        api_err("Invalid address");
+    }
+    $smartContract = SmartContract::getById($address);
+    if(!$smartContract) {
+        api_err("Not found smart contract fro address '$address'");
+    }
+    $codeData=base64_decode($smartContract['code']);
+    $codeData=json_decode($codeData,true);
+    $interface = SmartContractEngine::getInterface($address);
+    if(!$interface) {
+        api_err("Error verify smart contract: ".$error);
+    }
+    $name=$smartContract['name'];
+    $description=$smartContract['description'];
+    $metadata_str=$smartContract['metadata'];
+    $tx=Transaction::getSmartContractCreateTransaction($address);
+    $data = $tx['data'];
+    $data = base64_decode($data);
+    $data = json_decode($data,true);
+    $deployParams = [];
+    foreach($interface['deploy']['params'] as $ix => $param) {
+        $deployParams[$param['name']] = $data['params'][$ix];
+    }
+    $_SESSION['contract']['address']=$address;
+    $_SESSION['contract']['phar_code']=$codeData['code'];
+    $_SESSION['contract']['interface']=$interface;
+    $_SESSION['contract']['name'] = $name;
+    $_SESSION['contract']['description'] = $description;
+    $_SESSION['contract']['metadata'] = $metadata_str;
+    $_SESSION['contract']['status']='deployed';
+    $_SESSION['contract']['signature']=$smartContract['signature'];
+    $_SESSION['contract']['params']=$data['params'];
+    $_SESSION['contract']["deployParams"]=$deployParams;
+    $_SESSION['contract']["amount"]=$data['amount'];
+    $_SESSION["deployParams"]=$deployParams;
+    $_SESSION['contractWallet']['address']=$address;
+    api_echo($_SESSION['contract']);
+}
 if($q=="getSource") {
     $address=$_SESSION['contract']['address'];
     if($virtual) {
         $code=$_SESSION['contract']['phar_code'];
         $code=base64_decode($code);
     } else {
-        $smartContract = api_get("/api.php?q=getSmartContract&address=".$address);
+        $engine = $_SESSION['engine'];
+        $node = $engine['node'];
+        $smartContract = api_get($node . "/api.php?q=getSmartContract&address=".$address);
         $code=$smartContract['code'];
         $decoded=json_decode(base64_decode($code), true);
-        $code=base64_decode($decoded['code']);
+        $code = base64_decode($decoded['code']);
     }
 
     $phar_file = "/var/www/phpcoin/tmp/sc/".$address.".phar";
@@ -194,7 +256,24 @@ if($q=="getSource") {
     readfile ($phar_file);
     exit();
 }
-
+if($q == "sourceToEditor") {
+    $address=$_SESSION['contract']['address'];
+    $phar_file = "/var/www/phpcoin/tmp/sc/".$address.".phar";
+    $smartContract=SmartContract::getById($address);
+    $code=$smartContract['code'];
+    $decoded=json_decode(base64_decode($code), true);
+    $code = base64_decode($decoded['code']);
+    file_put_contents($phar_file, $code);
+    try {
+        $phar = new Phar($phar_file);
+    } catch (Throwable $t) {
+        api_echo($t->getMessage());
+    }
+    $folder = dirname(__DIR__) . "/workspace/users/" . session_id()."/".$address;
+    mkdir($folder);
+    $phar->extractTo($folder);
+    api_echo($phar_file);
+}
 if($q=="signDeploy") {
     $contactData=$data['contract'];
     $name=$contactData['name'];
@@ -270,7 +349,7 @@ if($q === "deploy") {
     if($virtual) {
         SmartContractEngine::$virtual = true;
         SmartContractEngine::$smartContracts[$deploy_address] = $contract;
-        SmartContractEngine::cleanVirtualState($deploy_address);
+        //SmartContractEngine::cleanVirtualState($deploy_address);
         $res = SmartContractEngine::process($deploy_address, [$transaction], 0, false, $err);
         $debug_logs = SmartContractEngine::$debug_logs ?? [];
         @$_SESSION['debug_logs']=array_merge($_SESSION['debug_logs'] ?? [], $debug_logs);
@@ -390,7 +469,6 @@ if($q == "callView") {
     } else {
         $params = array_values($params);
         $params = base64_encode(json_encode($params));
-        $sc_address = $_SESSION['contractWallet']['address'];
         $res = api_get($node."/api.php?q=getSmartContractView&address=$sc_address&method=$view_method&params=$params");
     }
     if($err) {
@@ -458,6 +536,7 @@ if($q == "afterLoginScWallet") {
         if($_SESSION['auth_request_code'] == $auth_data['request_code']) {
             $address=$auth_data['account']['address'];
             $_SESSION['contractWallet']['address']=$address;
+            $_SESSION['contract']['address']=$address;
         }
     }
     header('Location:'.$engine['atheos_url']);
@@ -518,6 +597,30 @@ if($q=="afterDeployReal") {
     $_SESSION['contract']['status']='deployed';
     header('Location:'.$engine['atheos_url']);
     exit;
+}
+if($q=="reloadTxs") {
+    if($virtual) {
+        $transactions = $_SESSION["transactions"];
+    } else {
+        global $db;
+        $transactions = getTxs($_SESSION['wallet']['address']);
+    }
+    $data['transactions']=$transactions;
+    $data['state']=SmartContractEngine::getState($_SESSION['contract']['address']);
+    $data['debug_logs']=$_SESSION['debug_logs'];
+    api_echo($data);
+}
+if($q == "clearState") {
+    if($virtual) {
+        SmartContractEngine::cleanVirtualState($_SESSION['contract']['address']);
+    }
+    api_echo(true);
+}
+if($q == "clearLog") {
+    if($virtual) {
+        $_SESSION['debug_logs']=[];
+    }
+    api_echo(true);
 }
 api_err("Invalid query");
 

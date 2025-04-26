@@ -6,7 +6,7 @@ const app = createApp({
 
     data() {
         return {
-            engines: [],
+            engines: {},
             engine: null,
             accounts: {},
             wallet: null,
@@ -31,7 +31,9 @@ const app = createApp({
             viewResponses: {},
             propertyKeys: {},
             propertyValues: {},
-            deployParams: {}
+            deployParams: {},
+            connectSc: false,
+            connectScAddress: null
         }
     },
     computed: {
@@ -80,7 +82,6 @@ const app = createApp({
                 this.contractSources = res.contractSources
                 this.contract = res.contract
                 this.transactions = res.transactions
-                this.node = res.node
                 this.state = res.state
                 this.debug_logs = res.debug_logs
                 this.deployParams = JSON.stringify(res.deployParams) === '[]' ? {} : res.deployParams
@@ -107,6 +108,12 @@ const app = createApp({
         },
         getSource() {
             window.open('/phpcoin/api.php?q=getSource', '_blank')
+        },
+        sourceToEditor() {
+            this.api('sourceToEditor', {}, ()=>{
+                window.atheos.filemanager.openDir($('#project-root').attr('data-path'), true)
+                this.load()
+            })
         },
         deploy() {
             let data = {
@@ -235,8 +242,62 @@ const app = createApp({
                 document.location.href=res
             })
         },
+        connectScWallet() {
+            this.api('connectScWallet', {address: this.connectScAddress}, this.load)
+        },
         logoutScWallet() {
             this.api('logoutScWallet', {}, this.load)
+        },
+        scInteract() {
+            this.api('scInteract', {address: this.contractWallet.address}, this.load)
+        },
+        copyToClipboard(text) {
+            if (!navigator.clipboard) {
+                let sampleTextarea = document.createElement("textarea");
+                document.body.appendChild(sampleTextarea);
+                sampleTextarea.value = text; //save main text in it
+                sampleTextarea.select(); //select textarea contenrs
+                try {
+                    let successful = document.execCommand('copy');
+                    if(successful) {
+                        this.setCopied()
+                    }
+                } catch (err) {
+                }
+                document.body.removeChild(sampleTextarea);
+                return
+            }
+            navigator.clipboard.writeText(text).then(()=>{
+                this.setCopied()
+            })
+        },
+        setCopied() {
+            console.log('copied')
+            window.toast('notice', 'Copied!')
+        },
+        refreshTxs() {
+            this.api('reloadTxs', {}, res=> {
+                this.transactions = res.transactions
+                this.state = res.state
+                this.debug_logs = res.debug_logs
+            })
+        },
+        clearState() {
+            this.api('clearState', {}, res=> {
+                this.state = []
+            })
+        },
+        clearLog() {
+            this.api('clearLog', {}, res=> {
+                this.debug_logs = []
+            })
+        },
+        compileAndDeploy(){
+          let data = {
+                address: this.contractWallet.address,
+                source: this.contract.source
+            }
+            this.api('compile', data, this.deploy)
         }
     }
 

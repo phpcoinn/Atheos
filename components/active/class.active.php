@@ -28,7 +28,7 @@ class Active {
 	// Construct
 	//////////////////////////////////////////////////////////////////////////80
 	public function __construct() {
-		$this->activeUser = SESSION("user");
+		$this->activeUser = session_id();
 		$this->db = Common::getObjStore("active");
 	}
 

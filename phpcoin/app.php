@@ -116,27 +116,29 @@ $settings = @$_SESSION['settings'];
                 </div>
             </template>
         </div>
-        <div class="grid align-items-center m-0">
-            <div class="col-12 sm:col-3">
-                Source:
+        <template v-if="!contract.connected">
+            <div class="grid align-items-center m-0">
+                <div class="col-12 sm:col-3">
+                    Source:
+                </div>
+                <div class="col-12 sm:col-9 flex">
+                    <select v-model="contract.source" class="m-0 p-1">
+                        <template v-for="cs in contractSources">
+                            <option :value="cs">
+                                {{cs}}
+                            </option>
+                        </template>
+                    </select>
+                </div>
             </div>
-            <div class="col-12 sm:col-9 flex">
-                <select v-model="contract.source" class="m-0 p-1">
-                    <template v-for="cs in contractSources">
-                        <option :value="cs">
-                            {{cs}}
-                        </option>
-                    </template>
-                </select>
+            <div class="grid align-items-center m-0">
+                <div class="col-12 sm:col-3"></div>
+                <div class="col-12 sm:col-9 flex">
+                    <button @click="compile" class="p-1" :disabled="compiling">{{ compiling ? 'Compiling...' : 'Compile' }}</button>
+                    <button v-if="virtual" @click="compileAndDeploy" class="p-1">Compile and deploy</button>
+                </div>
             </div>
-        </div>
-        <div class="grid align-items-center m-0">
-            <div class="col-12 sm:col-3"></div>
-            <div class="col-12 sm:col-9 flex">
-                <button @click="compile" class="p-1">Compile</button>
-                <button v-if="virtual" @click="compileAndDeploy" class="p-1">Compile and deploy</button>
-            </div>
-        </div>
+        </template>
 
         <div class="grid align-items-start m-0" v-if="contract.status === 'compiled' || contract.status === 'deployed'">
             <div class="col-12 sm:col-3">
@@ -250,17 +252,19 @@ $settings = @$_SESSION['settings'];
                 <div class="grid align-items-center m-0">
                     <div class="col-12 sm:col-3 p-1">Address:</div>
                     <div class="col-12 sm:col-9 p-1">
-                        <input type="text" v-model="methodAddress" class="m-0 p-1"  readonly v-if="methodType === 'exec'"/>
+                        <input type="text" v-model="methodAddress" class="m-0 p-1"  disabled v-if="methodType === 'exec'"/>
                         <div class="flex flex-wrap" style="gap: 5px" v-if="methodType === 'send'">
-                            <select v-model="sendAddress" class="m-0 p-1">
+                            <select v-model="sendAddress" class="m-0 p-1 w-auto" style="flex-grow: 1" v-if="openSelect">
                                 <template v-for="account in Object.values(accounts)">
                                     <option :value="account.address">
                                         {{account.address}}
                                     </option>
                                 </template>
                             </select>
-                            <input type="text" class="m-0 p-1" v-model="sendAddress"/>
-                            <button @click="generateSendAddress" class="p-1">Generate</button>
+                            <button @click="openSelect=false" class="p-1" v-if="openSelect">Back</button>
+                            <input type="text" class="m-0 p-1 w-auto" style="flex-grow: 1" v-model="sendAddress" v-if="!openSelect"/>
+                            <button @click="openSelect=true" class="p-1" v-if="!openSelect">Select</button>
+                            <button @click="generateSendAddress" class="p-1" v-if="!openSelect">Generate</button>
                         </div>
                     </div>
                 </div>
@@ -314,7 +318,7 @@ $settings = @$_SESSION['settings'];
                         </div>
                         <div class="col-12 sm:col-3 p-1 flex align-items-center flex-wrap" v-if="viewResponses[view.name]!==null">
                             <div class="flex-1" style="white-space: nowrap; overflow: auto">{{viewResponses[view.name]}}</div>
-                            <button @click="delete viewResponses[view.name]" class="p-1">Clear</button>
+                            <button @click="clearViewResponse(view.name)" class="p-1">Clear</button>
                         </div>
                     </div>
                 </template>
@@ -330,7 +334,7 @@ $settings = @$_SESSION['settings'];
                         </div>
                         <div class="col-12 sm:col-6 p-1 flex flex-wrap align-items-center" v-if="propertyValues[property.name]!==null">
                             <div class="flex-1">{{propertyValues[property.name]}}</div>
-                            <button @click="delete propertyValues[property.name]" class="p-1 m-0">Clear</button>
+                            <button @click="clearPropertyValue(property.name)" class="p-1 m-0">Clear</button>
                         </div>
                     </div>
                 </template>

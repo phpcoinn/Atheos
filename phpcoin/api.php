@@ -24,14 +24,17 @@ $engines = [
         "atheos_url"=>"https://atheos.phpcoin.net",
         "chainId" => "01"
     ],
-//    "local"=>[
-//        "name"=>"local",
-//        "title" => "Local",
-//        "node" => "http://phpcoin",
-//        "atheos_url"=>"http://phpcoin:90",
-//        "chainId" => "01"
-//    ],
 ];
+
+if(DEVELOPMENT) {
+    $engines['local'] = [
+        "name"=>"local",
+        "title" => "Local",
+        "node" => "http://phpcoin",
+        "atheos_url"=>"http://phpcoin:90",
+        "chainId" => "00"
+    ];
+}
 
 function api_get($url, &$error = null) {
     $res = @file_get_contents($url);
@@ -114,6 +117,10 @@ if($q == "load") {
         "debug_logs"=>$_SESSION['debug_logs'],
         "deployParams"=>$_SESSION["deployParams"] ?? [],
     ];
+    $res["methodType"] = @$_SESSION["methodType"];
+    $res["sendAddress"] = @$_SESSION["sendAddress"];
+    $res["methodAmount"] = @$_SESSION["methodAmount"];
+    $res["methodParams"] = @$_SESSION["methodParams"];
     api_echo($res);
 }
 if($q == "changeEngine") {
@@ -197,7 +204,7 @@ if($q=="connectScWallet") {
     }
     $smartContract = SmartContract::getById($address);
     if(!$smartContract) {
-        api_err("Not found smart contract fro address '$address'");
+        api_err("Not found smart contract for address '$address'");
     }
     $codeData=base64_decode($smartContract['code']);
     $codeData=json_decode($codeData,true);
@@ -229,6 +236,7 @@ if($q=="connectScWallet") {
     $_SESSION['contract']["amount"]=$data['amount'];
     $_SESSION["deployParams"]=$deployParams;
     $_SESSION['contractWallet']['address']=$address;
+    $_SESSION['contract']['connected']=true;
     api_echo($_SESSION['contract']);
 }
 if($q=="getSource") {
@@ -258,6 +266,7 @@ if($q=="getSource") {
 }
 if($q == "sourceToEditor") {
     $address=$_SESSION['contract']['address'];
+    @mkdir("/var/www/phpcoin/tmp/sc/");
     $phar_file = "/var/www/phpcoin/tmp/sc/".$address.".phar";
     $smartContract=SmartContract::getById($address);
     $code=$smartContract['code'];
@@ -343,8 +352,10 @@ if($q === "deploy") {
     $deploy_address = $contract['address'];
     $deploy_amount = $contract['amount'];
 
+    $createFee = api_get($node . "/api.php?q=getSmartContractCreateFee");
+
     $msg = $signature;
-    $transaction = new Transaction($public_key,$deploy_address,$deploy_amount,TX_TYPE_SC_CREATE,$date, $msg, TX_SC_CREATE_FEE);
+    $transaction = new Transaction($public_key,$deploy_address,$deploy_amount,TX_TYPE_SC_CREATE,$date, $msg, $createFee);
     $transaction->data = $txdata;
     if($virtual) {
         SmartContractEngine::$virtual = true;
@@ -357,7 +368,7 @@ if($q === "deploy") {
             api_err('Smart contract not deployed: '.$err);
         } else {
             $_SESSION['transactions'][]=$transaction->toArray();
-            $_SESSION['accounts'][$address]['balance']=$_SESSION['accounts'][$address]['balance'] - TX_SC_CREATE_FEE;
+            $_SESSION['accounts'][$address]['balance']=$_SESSION['accounts'][$address]['balance'] - $createFee;
             $_SESSION['accounts'][$address]['balance'] = round($_SESSION['accounts'][$address]['balance'],8);
             $_SESSION['accounts'][$deploy_address]['balance']+=$deploy_amount;
             $_SESSION['accounts'][$deploy_address]['balance']=round($_SESSION['accounts'][$deploy_address]['balance'],8);
@@ -376,6 +387,9 @@ if($q === "callMethod") {
     $exec_method = $data['exec_method'];
     $exec_params = $data['exec_params'];
     if(strlen($amount)==0) $amount=0;
+    $_SESSION["methodType"]=$method_type;
+    $_SESSION['methodAmount']=$amount;
+    $_SESSION["methodParams"][$exec_method]=$exec_params;
     $engine = $_SESSION['engine'];
     $node = $engine['node'];
     if(empty($method_type)) {
@@ -398,6 +412,7 @@ if($q === "callMethod") {
         $type=TX_TYPE_SC_SEND;
         $src=$address;
         $dst=$fn_address;
+        $_SESSION["sendAddress"]=$dst;
         if(empty($dst)) {
             api_err('Destination address must be specified');
         }
@@ -416,10 +431,12 @@ if($q === "callMethod") {
     $msg=base64_encode(json_encode($callData));
     $wallet = $_SESSION['wallet'];
 
+    $execFee = api_get($node . "/api.php?q=getSmartContractExecFee");
+
     if($virtual) {
         $date = time();
         $public_key = $wallet['public_key'];
-        $transaction = new Transaction($public_key,$dst,$amount,$type,$date, $msg, TX_SC_EXEC_FEE);
+        $transaction = new Transaction($public_key,$dst,$amount,$type,$date, $msg, $execFee);
         $hash = $transaction->hash();
         SmartContractEngine::$virtual = true;
         SmartContractEngine::$smartContracts[$_SESSION['contract']['address']] = $_SESSION['contract'];
@@ -429,19 +446,20 @@ if($q === "callMethod") {
         }
         $debug_logs = SmartContractEngine::$debug_logs;
         $_SESSION['debug_logs']=array_merge($_SESSION['debug_logs'], $debug_logs);
-        $_SESSION['accounts'][$src]['balance'] = $_SESSION['accounts'][$src]['balance'] - (TX_SC_EXEC_FEE + $amount);
+        $_SESSION['accounts'][$src]['balance'] = $_SESSION['accounts'][$src]['balance'] - ($execFee + $amount);
         $_SESSION['accounts'][$dst]['balance'] = $_SESSION['accounts'][$dst]['balance'] + $amount;
         $_SESSION['accounts'][$src]['balance'] = round($_SESSION['accounts'][$src]['balance'], 8);
         $_SESSION['accounts'][$dst]['balance'] = round($_SESSION['accounts'][$dst]['balance'], 8);
         $_SESSION['transactions'][]=$transaction->toArray();
         api_echo(true);
     } else {
+        $a=1;
         $tx = [
             "src"=>$wallet['address'],
             "dst"=>$dst,
             "val"=>$amount,
             "msg"=>$msg,
-            "fee"=>TX_SC_EXEC_FEE,
+            "fee"=>$execFee,
             "type" => $type,
             "date"=>time()
         ];
@@ -544,10 +562,12 @@ if($q == "afterLoginScWallet") {
 }
 if($q == "logoutScWallet") {
     unset($_SESSION['contractWallet']);
+    unset($_SESSION['contract']);
     api_echo(true);
 }
 if($q=="deployReal") {
     $engine = $_SESSION['engine'];
+    $node = $engine['node'];
     if(empty($_REQUEST['signature_data'])) {
         //go back
         header("Location:".$engine['atheos_url']);
@@ -559,12 +579,13 @@ if($q=="deployReal") {
     $signature_data = json_decode($signature_data, true);
     $signature = $signature_data['signature'];
     $_SESSION['contract']['signature']=$signature;
+    $createFee = api_get($node . "/api.php?q=getSmartContractCreateFee");
     $tx = [
         "src"=>$_SESSION['wallet']['address'],
         "dst"=>$_SESSION['contractWallet']['address'],
         "val"=>$_SESSION['contract']['amount'],
         "msg"=>$signature,
-        "fee"=>TX_SC_CREATE_FEE,
+        "fee"=>$createFee,
         "type" => TX_TYPE_SC_CREATE,
         "date"=>time()
     ];

@@ -33,7 +33,9 @@ const app = createApp({
             propertyValues: {},
             deployParams: {},
             connectSc: false,
-            connectScAddress: null
+            connectScAddress: null,
+            openSelect: false,
+            compiling: false
         }
     },
     computed: {
@@ -85,6 +87,12 @@ const app = createApp({
                 this.state = res.state
                 this.debug_logs = res.debug_logs
                 this.deployParams = JSON.stringify(res.deployParams) === '[]' ? {} : res.deployParams
+                this.methodType = res.methodType
+                this.sendAddress = res.sendAddress
+                this.methodAmount = res.methodAmount
+                if(res.methodParams) {
+                    this.methodParams = res.methodParams
+                }
             })
         },
         changeEngine() {
@@ -100,11 +108,18 @@ const app = createApp({
             this.api('generateScWallet', {}, this.load)
         },
         compile() {
+            if(!this.contractWallet || !this.contractWallet.address) {
+                alert('Missing Smart Contract address')
+            }
             let data = {
                 address: this.contractWallet.address,
                 source: this.contract.source
             }
-            this.api('compile', data, this.load)
+            this.compiling = true;
+            this.api('compile', data, () => {
+                this.load()
+                this.compiling = false
+            })
         },
         getSource() {
             window.open('/phpcoin/api.php?q=getSource', '_blank')
@@ -298,6 +313,14 @@ const app = createApp({
                 source: this.contract.source
             }
             this.api('compile', data, this.deploy)
+        },
+        clearPropertyValue(name) {
+            delete this.propertyValues[name]
+            delete this.propertyKeys[name]
+        },
+        clearViewResponse(name) {
+            delete this.viewResponses[name]
+            delete this.viewParams[name]
         }
     }
 

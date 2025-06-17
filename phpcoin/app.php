@@ -119,11 +119,40 @@ $settings = @$_SESSION['settings'];
         <template v-if="!contract.connected">
             <div class="grid align-items-center m-0">
                 <div class="col-12 sm:col-3">
+                    Source type:
+                </div>
+                <div class="col-12 sm:col-9 p-1 flex">
+                    <label class="mr-2">
+                        <input type="radio" v-model="sourceType" value="file" style="width: auto"/>
+                        File
+                    </label>
+                    <label>
+                        <input type="radio" v-model="sourceType" value="folder" style="width: auto"/>
+                        Folder
+                    </label>
+                </div>
+            </div>
+            <div class="grid align-items-center m-0" v-if="sourceType">
+                <div class="col-12 sm:col-3">
                     Source:
                 </div>
-                <div class="col-12 sm:col-9 flex">
+                <div class="col-12 sm:col-9">
                     <select v-model="contract.source" class="m-0 p-1">
-                        <template v-for="cs in contractSources">
+                        <template v-for="cs in contractSources[sourceType]">
+                            <option :value="cs">
+                                {{cs}}
+                            </option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+            <div class="grid align-items-center m-0" v-if="sourceType === 'folder' && contract.source">
+                <div class="col-12 sm:col-3">
+                    Index file:
+                </div>
+                <div class="col-12 sm:col-9">
+                    <select v-model="contract.indexSource" class="m-0 p-1">
+                        <template v-for="cs in contractSources.tree[contract.source]">
                             <option :value="cs">
                                 {{cs}}
                             </option>

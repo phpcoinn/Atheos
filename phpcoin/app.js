@@ -14,7 +14,7 @@ const app = createApp({
             walletBalance: null,
             contractWallet: null,
             contract: {},
-            contractSources: [],
+            contractSources: {},
             interfaceTab: 'methods',
             methodType: 'exec',
             methodAmount: 0,
@@ -35,7 +35,8 @@ const app = createApp({
             connectSc: false,
             connectScAddress: null,
             openSelect: false,
-            compiling: false
+            compiling: false,
+            sourceType: 'file'
         }
     },
     computed: {
@@ -113,7 +114,9 @@ const app = createApp({
             }
             let data = {
                 address: this.contractWallet.address,
-                source: this.contract.source
+                source: this.contract.source,
+                sourceType: this.sourceType,
+                indexSource: this.contract.indexSource,
             }
             this.compiling = true;
             this.api('compile', data, () => {

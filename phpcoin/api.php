@@ -1,8 +1,16 @@
 <?php
 
-@define("DEFAULT_CHAIN_ID", "/var/www/phpcoin/chain_id");
-define("ROOT", "/var/www/phpcoin");
-require_once '/var/www/phpcoin/include/init.inc.php';
+$engine=@$_SESSION["engine"];
+if($engine === "testnet") {
+    @define("DEFAULT_CHAIN_ID", "/var/www/phpcoin/chain_id");
+    define("ROOT", "/var/www/phpcoin");
+    require_once '/var/www/phpcoin/include/init.inc.php';
+} else {
+    @define("DEFAULT_CHAIN_ID", "/var/www/phpcoin-mainnet/chain_id");
+    define("ROOT", "/var/www/phpcoin-mainnet");
+    require_once '/var/www/phpcoin-mainnet/include/init.inc.php';
+}
+
 
 if(!isset($_REQUEST["q"])){
     api_err("Missing query");
@@ -24,7 +32,15 @@ $engines = [
         "atheos_url"=>"https://atheos.phpcoin.net",
         "chainId" => "01"
     ],
+    "mainnet"=>[
+        "name"=>"mainnet",
+        "title" => "Mainnet",
+        "node" => "https://main1.phpcoin.net",
+        "atheos_url"=>"https://atheos.phpcoin.net",
+        "chainId" => "00"
+    ],
 ];
+
 
 if(DEVELOPMENT) {
     $engines['local'] = [
@@ -50,12 +66,12 @@ function api_get($url, &$error = null) {
 
 function getTxs($address) {
     global $db;
-    $sql='select * from (select id, block, height, src, dst, val, fee, signature, type, message, date, public_key, data
+    $sql='select * from (select id, block, height, src, dst, val, fee, signature, type, message, date, public_key, data, 1 as source
                from transactions t where (t.src = ? or t.dst = ?) and t.type in (5,6,7)
                 union all 
-               (select id, null as block, height, src, dst, val, fee, signature, type, message, date, public_key, data
+               (select id, null as block, height, src, dst, val, fee, signature, type, message, date, public_key, data, 0 as source
                 from mempool t where (t.src = ? or t.dst = ?) and t.type in (5,6,7))) as txs
-                order by txs.height desc';
+                order by txs.height desc, txs.source';
     $transactions = $db->run($sql,
         [$address,$address,$address,$address],false);
     return $transactions;
@@ -80,20 +96,32 @@ $virtual = @$_SESSION['engine']['name'] == 'virtual';
 if($q == "load") {
 
     $folder = dirname(__DIR__) . "/workspace/users/" . session_id();
-    $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($folder, FilesystemIterator::SKIP_DOTS | FilesystemIterator::FOLLOW_SYMLINKS));
-    $list = array();
-    foreach ($rii as $file) {
-        if ($file->isDir()){
-            continue;
+    $files = [];
+    $folders = ["/"];
+    $tree = [];
+
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($folder, FilesystemIterator::SKIP_DOTS | FilesystemIterator::FOLLOW_SYMLINKS),
+        RecursiveIteratorIterator::SELF_FIRST);
+    foreach ($iterator as $fileInfo) {
+        $name = $fileInfo->getFilename();
+        $path = $fileInfo->getPathname();
+        $path = str_replace($folder, '', $path);
+        $path = substr($path, 1);
+        if ($fileInfo->isDir()) {
+            $folders[] = $path;
+        } else {
+            $files[] = $path;
+            $parent = dirname($fileInfo->getPathname());
+            $parent = str_replace($folder, '', $parent);
+            $parent = substr($parent, 1);
+            $tree[$parent][]=$name;
         }
-        $list[] = $file->getPathname();
     }
-    $files = ["/"];
-    foreach($list as $item) {
-        if(strpos($item, $folder) !== false) {
-            $files[]=str_replace($folder, "", $item);
-        }
-    }
+
+    $contractSources['file']=$files;
+    $contractSources['folder']=$folders;
+    $contractSources['tree']=$tree;
+
     SmartContractEngine::$virtual = $virtual;
     if(!$virtual) {
         if(!empty($_SESSION['wallet'])) {
@@ -110,14 +138,14 @@ if($q == "load") {
         "accounts"=>$_SESSION['accounts'],
         "wallet"=>$_SESSION['wallet'],
         "contractWallet"=>$_SESSION['contractWallet'],
-        "contractSources" => $files,
+        "contractSources" => $contractSources,
         "contract"=>$_SESSION['contract'] ?? [],
         "transactions"=>$virtual ? $_SESSION["transactions"] ?? [] : $transactions,
         "state"=>SmartContractEngine::getState($_SESSION['contract']['address']),
         "debug_logs"=>$_SESSION['debug_logs'],
         "deployParams"=>$_SESSION["deployParams"] ?? [],
     ];
-    $res["methodType"] = @$_SESSION["methodType"];
+    $res["methodType"] = @$_SESSION["methodType"] ?? "exec";
     $res["sendAddress"] = @$_SESSION["sendAddress"];
     $res["methodAmount"] = @$_SESSION["methodAmount"];
     $res["methodParams"] = @$_SESSION["methodParams"];
@@ -167,17 +195,28 @@ if($q == "generateScWallet") {
 if($q == "compile") {
     $address = $data['address'];
     $source = $data['source'];
+    $sourceType = $data['sourceType'];
+    $indexSource = $data['indexSource'];
     $_SESSION['contract']['source'] = $source;
+    $_SESSION['contract']['sourceType'] = $sourceType;
+    $_SESSION['contract']['indexSource'] = $indexSource;
     $_SESSION['contract']['address'] = $address;
     SmartContractEngine::$virtual = $virtual;
-    $phar_file = "/var/www/phpcoin/tmp/sc/".$address.".phar";
     $folder = dirname(__DIR__) . "/workspace/users/" . session_id();
-    if($source == "/") {
-        $file =$folder."/index.php";
+    if($sourceType == "file") {
+        if($source == "/") {
+            $file =$folder."/index.php";
+        } else {
+            $file = $folder."/".$source;
+        }
     } else {
-        $file = $folder.$source;
+        $file = $folder."/".$source;
+        $index_file = $indexSource;
     }
-    $res = SmartContract::compile($address,$file, $phar_file, $err);
+
+
+    $phar_file = "/var/www/phpcoin/tmp/sc/".$address.".phar";
+    $res = SmartContract::compile($address,$file, $phar_file, $err, $index_file);
     if(!$res) {
         api_err("Error compiling contract: $err");
     }

@@ -14,7 +14,7 @@ $settings = @$_SESSION['settings'];
     </div>
 
     <div class="row grid align-items-center m-0">
-        <div class="col-12 sm:col-3">Engine:</div>
+        <div class="col-12 sm:col-3">Engine: <?= @$_SESSION['engine']['name'] ?></div>
         <div class="col-12 sm:col-9">
             <select class="m-0 p-1" v-model="engine" @change="changeEngine">
                 <template v-for="(e,k) in engines" :key="k">
@@ -303,14 +303,14 @@ $settings = @$_SESSION['settings'];
                         <input type="text" v-model="methodAmount" class="m-0 p-1"/>
                     </div>
                 </div>
-                <template v-for="method in contract.interface.methods">
+                <template v-for="method in contract.interface.methods" :key="method.name">
                     <div class="grid border-1 m-1 p-1 align-items-center">
                         <div class="col-12 sm:col-3 p-1">
                             <button class="w-full m-0 p-1" @click="callMethod(method.name)">{{method.name}}</button>
                         </div>
                         <div class="col-12 sm:col-9 p-1">
                             {{initMethodParamMap(method.name)}}
-                            <template v-for="param in method.params">
+                            <template v-for="param in method.params" :key="param.name">
                                 <div class="grid align-items-center m-0 p-0">
                                     <div class="col-12 sm:col-3 p-1">
                                         {{param.name}}

@@ -1,4 +1,4 @@
-const { createApp, ref, computed } = Vue;
+const { createApp, ref, computed, toRaw } = Vue;
 
 const MAIN_DAPPS_ID = 'PeC85pqFgRxmevonG6diUwT4AfF7YUPSm3';
 
@@ -62,7 +62,7 @@ const app = createApp({
     },
     methods: {
         api(q, data, cb) {
-            fetch('/phpcoin/api.php?q=' + q, {method:'POST', body: JSON.stringify(data)}).then(res => res.json().then(r => {
+            fetch('/phpcoin/api.php?q=' + q, {credentials: 'same-origin', method:'POST', body: JSON.stringify(data)}).then(res => res.json().then(r => {
                 if(r.status === 'error') {
                     alert(r.data)
                     return;
@@ -91,9 +91,6 @@ const app = createApp({
                 this.methodType = res.methodType
                 this.sendAddress = res.sendAddress
                 this.methodAmount = res.methodAmount
-                if(res.methodParams) {
-                    this.methodParams = res.methodParams
-                }
             })
         },
         changeEngine() {

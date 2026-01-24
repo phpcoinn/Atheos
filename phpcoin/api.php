@@ -1,7 +1,10 @@
 <?php
+define("BASE_PATH", dirname(__DIR__));
+session_name(md5(BASE_PATH));
+session_start();
 
 $engine=@$_SESSION["engine"];
-if($engine === "testnet") {
+if($engine['name'] === "testnet") {
     @define("DEFAULT_CHAIN_ID", "/var/www/phpcoin/chain_id");
     define("ROOT", "/var/www/phpcoin");
     require_once '/var/www/phpcoin/include/init.inc.php';
@@ -39,6 +42,13 @@ $engines = [
         "atheos_url"=>"https://atheos.phpcoin.net",
         "chainId" => "00"
     ],
+//    "local"=>[
+//        "name"=>"local",
+//        "title" => "Local",
+//        "node" => "http://phpoin",
+//        "atheos_url"=>"http://phpcoin:90",
+//        "chainId" => "01"
+//    ],
 ];
 
 
@@ -93,8 +103,12 @@ set_error_handler(function($no, $str) {
 
 $virtual = @$_SESSION['engine']['name'] == 'virtual';
 
-if($q == "load") {
 
+
+
+
+function load() {
+    global $virtual,$engines;
     $folder = dirname(__DIR__) . "/workspace/users/" . session_id();
     $files = [];
     $folders = ["/"];
@@ -132,7 +146,12 @@ if($q == "load") {
         }
         $transactions = getTxs($_SESSION['wallet']['address']);
     }
+    $state = [];
+    if(isset($_SESSION['contract']['address'])) {
+        $state = SmartContractEngine::getState(@$_SESSION['contract']['address']);
+    }
     $res = [
+        "session_id" => session_id(),
         "engines" => $engines,
         "engine" => $_SESSION['engine'],
         "accounts"=>$_SESSION['accounts'],
@@ -141,34 +160,36 @@ if($q == "load") {
         "contractSources" => $contractSources,
         "contract"=>$_SESSION['contract'] ?? [],
         "transactions"=>$virtual ? $_SESSION["transactions"] ?? [] : $transactions,
-        "state"=>SmartContractEngine::getState($_SESSION['contract']['address']),
+        "state"=>$state,
         "debug_logs"=>$_SESSION['debug_logs'],
         "deployParams"=>$_SESSION["deployParams"] ?? [],
     ];
     $res["methodType"] = @$_SESSION["methodType"] ?? "exec";
     $res["sendAddress"] = @$_SESSION["sendAddress"];
     $res["methodAmount"] = @$_SESSION["methodAmount"];
-    $res["methodParams"] = @$_SESSION["methodParams"];
     api_echo($res);
 }
-if($q == "changeEngine") {
+function changeEngine() {
+    global $engines, $data;
     $name = $data['name'];
     $_SESSION['engine'] = $engines[$name];
     api_echo(true);
 }
-if($q == "changeAccount") {
+function changeAccount() {
+    global $data;
     $address = $data['address'];
     $_SESSION['wallet'] = $_SESSION['accounts'][$address];
     api_echo(true);
 }
-if($q=="generateAccount") {
+function generateAccount() {
     $account = Account::generateAcccount();
     $account['balance']=100;
     $_SESSION['accounts'][$account['address']] = $account;
     $_SESSION['wallet'] = $account;
     api_echo(true);
 }
-if($q=="reset") {
+function freset() {
+    global $engines;
     $_SESSION['engine']=$engines['virtual'];
     $_SESSION['accounts']=[];
     $_SESSION['wallet']=null;
@@ -185,14 +206,15 @@ if($q=="reset") {
     $_SESSION["deployParams"]=[];
     api_echo(true);
 }
-if($q == "generateScWallet") {
+function generateScWallet() {
     $account=Account::generateAcccount();
     $account['balance']=100;
     $_SESSION['accounts'][$account['address']] = $account;
     $_SESSION['contractWallet']=$account;
     api_echo(true);
 }
-if($q == "compile") {
+function compile() {
+    global $data, $virtual;
     $address = $data['address'];
     $source = $data['source'];
     $sourceType = $data['sourceType'];
@@ -230,7 +252,8 @@ if($q == "compile") {
     $_SESSION['contract']['status']='compiled';
     api_echo($_SESSION['contract']);
 }
-if($q=="connectScWallet") {
+function connectScWallet() {
+    global $data;
     $address = $data['address'];
     if(empty($address)) {
         $address = $_SESSION['contract']['address'];
@@ -247,7 +270,7 @@ if($q=="connectScWallet") {
     }
     $codeData=base64_decode($smartContract['code']);
     $codeData=json_decode($codeData,true);
-    $interface = SmartContractEngine::getInterface($address);
+    $interface = SmartContractEngine::getInterface($address, $error);
     if(!$interface) {
         api_err("Error verify smart contract: ".$error);
     }
@@ -278,7 +301,8 @@ if($q=="connectScWallet") {
     $_SESSION['contract']['connected']=true;
     api_echo($_SESSION['contract']);
 }
-if($q=="getSource") {
+function getSource() {
+    global $virtual;
     $address=$_SESSION['contract']['address'];
     if($virtual) {
         $code=$_SESSION['contract']['phar_code'];
@@ -303,7 +327,7 @@ if($q=="getSource") {
     readfile ($phar_file);
     exit();
 }
-if($q == "sourceToEditor") {
+function sourceToEditor() {
     $address=$_SESSION['contract']['address'];
     @mkdir("/var/www/phpcoin/tmp/sc/");
     $phar_file = "/var/www/phpcoin/tmp/sc/".$address.".phar";
@@ -322,7 +346,8 @@ if($q == "sourceToEditor") {
     $phar->extractTo($folder);
     api_echo($phar_file);
 }
-if($q=="signDeploy") {
+function signDeploy() {
+    global $data, $virtual;
     $contactData=$data['contract'];
     $name=$contactData['name'];
     $description=$contactData['description'];
@@ -381,7 +406,8 @@ if($q=="signDeploy") {
     $_SESSION['contract']['txdata']=$txdata;
     api_echo($_SESSION['contract']);
 }
-if($q === "deploy") {
+function deploy() {
+    global $node, $data, $virtual;
     $signature = $data['signature'];
     $wallet = $_SESSION['wallet'];
     $public_key = $wallet['public_key'];
@@ -407,6 +433,7 @@ if($q === "deploy") {
             api_err('Smart contract not deployed: '.$err);
         } else {
             $_SESSION['transactions'][]=$transaction->toArray();
+            $address = $wallet['address'];
             $_SESSION['accounts'][$address]['balance']=$_SESSION['accounts'][$address]['balance'] - $createFee;
             $_SESSION['accounts'][$address]['balance'] = round($_SESSION['accounts'][$address]['balance'],8);
             $_SESSION['accounts'][$deploy_address]['balance']+=$deploy_amount;
@@ -418,14 +445,14 @@ if($q === "deploy") {
         api_echo(true);
     }
 }
-if($q === "callMethod") {
+function callMethod(){
+    global $data, $virtual;
     $address = $data['address'];
     $fn_address = $data['fn_address'];
-    $amount = $data['amount'];
+    $amount = $data['amount'] ?? 0;
     $method_type=$data['method_type'];
     $exec_method = $data['exec_method'];
     $exec_params = $data['exec_params'];
-    if(strlen($amount)==0) $amount=0;
     $_SESSION["methodType"]=$method_type;
     $_SESSION['methodAmount']=$amount;
     $_SESSION["methodParams"][$exec_method]=$exec_params;
@@ -510,7 +537,8 @@ if($q === "callMethod") {
         api_echo($url);
     }
 }
-if($q == "callView") {
+function callView() {
+    global $data, $virtual;
     $sc_address = $_SESSION['contract']['address'];
     $view_method = $data['method'];
 
@@ -533,7 +561,8 @@ if($q == "callView") {
     }
     api_echo($res);
 }
-if($q == "getProperty") {
+function getProperty() {
+    global $data, $virtual;
     $property = $data['name'];
     $key = $data['key'];
     if(strlen($key)==0) {
@@ -554,7 +583,7 @@ if($q == "getProperty") {
     }
     api_echo($val);
 }
-if($q == "loginWallet") {
+function loginWallet() {
     $request_code = uniqid();
     $_SESSION['auth_request_code']=$request_code;
     $engine = $_SESSION['engine'];
@@ -562,7 +591,7 @@ if($q == "loginWallet") {
     $url=$engine['node']."/dapps.php?url=".MAIN_DAPPS_ID."/wallet/auth.php?app=Athoes&request_code=$request_code&store_private_key=1&redirect=$redirect";
     api_echo($url);
 }
-if($q == "afterLoginWallet") {
+function afterLoginWallet() {
     $engine = $_SESSION['engine'];
     if(isset($_REQUEST['auth_data'])) {
         $auth_data = json_decode(base64_decode($_GET['auth_data']), true);
@@ -574,11 +603,11 @@ if($q == "afterLoginWallet") {
     header('Location:'.$engine['atheos_url']);
     exit;
 }
-if($q=="logoutWallet") {
+function logoutWallet() {
     unset($_SESSION['wallet']);
     api_echo(true);
 }
-if($q == "loginScWallet") {
+function loginScWallet() {
     $request_code = uniqid();
     $_SESSION['auth_request_code']=$request_code;
     $engine = $_SESSION['engine'];
@@ -586,7 +615,7 @@ if($q == "loginScWallet") {
     $url=$engine['node']."/dapps.php?url=".MAIN_DAPPS_ID."/wallet/auth.php?app=Athoes&request_code=$request_code&redirect=$redirect";
     api_echo($url);
 }
-if($q == "afterLoginScWallet") {
+function afterLoginScWallet(){
     $engine = $_SESSION['engine'];
     if(isset($_REQUEST['auth_data'])) {
         $auth_data = json_decode(base64_decode($_GET['auth_data']), true);
@@ -599,12 +628,12 @@ if($q == "afterLoginScWallet") {
     header('Location:'.$engine['atheos_url']);
     exit;
 }
-if($q == "logoutScWallet") {
+function logoutScWallet() {
     unset($_SESSION['contractWallet']);
     unset($_SESSION['contract']);
     api_echo(true);
 }
-if($q=="deployReal") {
+function deployReal() {
     $engine = $_SESSION['engine'];
     $node = $engine['node'];
     if(empty($_REQUEST['signature_data'])) {
@@ -647,7 +676,7 @@ if($q=="deployReal") {
     echo '</html>';
     exit;
 }
-if($q=="afterDeployReal") {
+function afterDeployReal() {
     $engine = $_SESSION['engine'];
     if(empty($_REQUEST['res'])) {
         //go back
@@ -658,7 +687,8 @@ if($q=="afterDeployReal") {
     header('Location:'.$engine['atheos_url']);
     exit;
 }
-if($q=="reloadTxs") {
+function reloadTxs() {
+    global $virtual;
     if($virtual) {
         $transactions = $_SESSION["transactions"];
     } else {
@@ -670,17 +700,43 @@ if($q=="reloadTxs") {
     $data['debug_logs']=$_SESSION['debug_logs'];
     api_echo($data);
 }
-if($q == "clearState") {
+function clearState() {
+    global $virtual;
     if($virtual) {
         SmartContractEngine::cleanVirtualState($_SESSION['contract']['address']);
     }
     api_echo(true);
 }
-if($q == "clearLog") {
+function clearLog() {
+    global $virtual;
     if($virtual) {
         $_SESSION['debug_logs']=[];
     }
     api_echo(true);
 }
+
+if(empty($q)) {
+    api_err("Missing query");
+}
+
+$fn = "f".$q;
+if(!function_exists($fn)) {
+    $fn = $q;
+    if(!function_exists($fn)) {
+        $fn = null;
+    }
+}
+
+if(empty($fn)) {
+    api_err("Missing function for query $q");
+}
+
+try {
+    call_user_func($fn);
+} catch (Throwable $e) {
+    api_err($e->getMessage());
+}
+
+
 api_err("Invalid query");
 

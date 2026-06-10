@@ -2,9 +2,10 @@
 
 **Project:** `atheos/`  
 **Reviewed on:** 2026-06-10  
+**Review completed:** 2026-06-10 (smoke test passed, git synced, docs updated)  
 **Live URL:** https://atheos.phpcoin.net/
 
-**Status:** **Working — keep running.** Primary web IDE for PHPCoin smart contract development. Maintenance mode; no active feature roadmap unless SC tooling changes on the node.
+**Status:** **REVIEW COMPLETE — keep running.** Primary web IDE for PHPCoin smart contract development. Maintenance only unless node SC APIs or gateway change.
 
 ---
 
@@ -18,10 +19,11 @@
 | SC panel | Vue 3 (`phpcoin/app.js` + `phpcoin/app.php`) |
 | Backend API | `phpcoin/api.php` — JSON RPC-style (`?q=load`, `compile`, `deploy`, …) |
 | Node integration | `include/init.inc.php` from co-located node (`SmartContract`, `SmartContractEngine`, `Transaction`) |
+| Wallet login | Dapps `legacywallet/auth.php` (mainnet/testnet engines) |
 | Signing (real nets) | Redirect to `{node}/dapps.php` → gateway `sign.php` / `approve.php` (`app=Atheos`) |
 | Examples | `workspace/examples/demo/*.php` (counter, fund_me, token, etc.) |
 
-**Strategic note:** New ecosystem apps are moving toward **`tx_data` first**; Atheos remains the tool for **classic smart contracts** (types 5/6/7). Deploy flow already stores contract payload in **`transaction.data`** / `tx_data` (see `signDeploy` → `deployReal`).
+**Strategic note:** New ecosystem apps are moving toward **`tx_data` first**; Atheos remains the tool for **classic smart contracts** (types 5/6/7). Deploy flow stores contract payload in **`transaction.data`** / `tx_data` (`signDeploy` → `deployReal`).
 
 ---
 
@@ -30,14 +32,14 @@
 ```
 atheos/
 ├── index.php              # IDE shell; PHPCoin auto-session + per-session workspace
-├── config.php             # DOMAIN, DEVELOPMENT, paths (gitignored in upstream; committed in fork)
+├── config.php             # DOMAIN, DEVELOPMENT, paths
 ├── phpcoin-sb.php         # Right sidebar: loads node + Vue SC panel
 ├── phpcoin/
 │   ├── app.php            # Vue SC panel markup
 │   ├── app.js             # Vue 3 client (compile, deploy, exec, view, connect SC)
 │   └── api.php            # SC API (virtual / testnet / mainnet engines)
 ├── workspace/
-│   ├── examples/demo/     # Sample contracts (in git via exceptions)
+│   ├── examples/demo/     # Sample contracts
 │   └── users/{session_id}/  # Ephemeral per-browser workspace (gitignored)
 └── components/            # Stock Atheos IDE components
 ```
@@ -53,43 +55,51 @@ atheos/
 
 ### PHPCoin customizations
 
-- **`index.php`** — skips Atheos login: `SESSION("user", "user")`; project path = `workspace/users/{session_id}`; fixed title “PHPCoin Smart Contracts”.
-- **Right sidebar** — SC actions panel replaces stock plugin bar (`sb-right.php` → `phpcoin-sb.php`).
+- **`index.php`** — skips Atheos login: `SESSION("user", "user")`; project path = `workspace/users/{session_id}`.
+- **Right sidebar** — SC panel via `sb-right.php` → `phpcoin-sb.php` → `app.php` / `api.php`.
 - **Theme toggle** — `?toggleTheme` light/dark; PrimeFlex + Vue 3 from CDN.
-- **Transactions list** — SQL joins `transaction_data` for SC tx types 5/6/7 (aligned with node `tx_data` storage).
+- **Transactions list** — SQL joins `transaction_data` for SC tx types 5/6/7 (node `tx_data`).
 
 ---
 
-## Production verification (2026-06-10)
+## Review outcomes (2026-06-10)
 
-| Check | Result |
-|-------|--------|
-| `https://atheos.phpcoin.net/` | HTTP 200, IDE loads (Ace, Vue, `phpcoin/app.js`) |
-| `phpcoin/api.php?q=freset` | HTTP 200, JSON `status: ok` (node init responds) |
-| Security headers | HSTS, X-Frame-Options, etc. from `config.php` `HEADERS` |
+| Item | Result |
+|------|--------|
+| Live IDE + API | HTTP 200; `freset` returns `status: ok` |
+| Wallet login smoke test | **Passed** — `legacywallet/auth.php` path (`d3c7f935`) |
+| Local ↔ server ↔ GitHub | **Aligned** at `d3c7f935` after divergence fix (`git reset --hard origin/main` on server) |
+| Legacy `phpcoin/actions.php` | **Removed** (unused form-based UI; never on server) |
+| Verdict | **Keep running** — no rebuild |
 
 ---
 
-## Deployment requirements
+## Deployment
 
-Atheos **must run on the same host** as the PHPCoin node tree it includes:
+| | |
+|--|--|
+| **Host** | `phpcoin1` |
+| **Web root** | `/var/www/atheos` |
+| **Domain** | `atheos.phpcoin.net` |
+| **Co-location** | Same host as `/var/www/phpcoin-mainnet` (hardcoded in `phpcoin-sb.php`, `phpcoin/api.php`) |
 
-| Path (hardcoded) | Used when |
-|------------------|-----------|
-| `/var/www/phpcoin-mainnet/include/init.inc.php` | Default + mainnet engine |
-| `/var/www/phpcoin/include/init.inc.php` | Testnet engine selected |
-| `/var/www/phpcoin/tmp/sc/` | PHAR compile/extract temp files |
+**Deploy:**
 
-**Domain:** `atheos.phpcoin.net` (`config.php` → `DOMAIN`).
+```bash
+# On phpcoin1
+cd /var/www/atheos
+git pull --ff-only origin main
+php -l phpcoin/api.php
+```
 
 **Git:**
 
-- Fork: `origin` → `https://github.com/phpcoinn/Atheos.git`
-- Upstream: `atheos` → `https://github.com/Atheos/Atheos`
-- Branch: **`phpcoin-main`** (local **3 commits ahead** of `origin/main` as of review)
-- Last commit: **2026-01-24** — “Updates after testing”
-
-**Deploy (typical):** pull `phpcoin-main` on server web root; ensure PHP 8.x + `phar` extension; nginx vhost to atheos tree; node paths exist.
+| | |
+|--|--|
+| **Remote** | `https://github.com/phpcoinn/Atheos.git` |
+| **Branch** | `main` (server) / `phpcoin-main` (local dev — tracks `origin/main`) |
+| **HEAD** | `d3c7f935` — *Fix atheos wallet login to use legacywallet auth path* |
+| **Upstream** | `atheos` → `https://github.com/Atheos/Atheos` (reference only) |
 
 ---
 
@@ -97,42 +107,28 @@ Atheos **must run on the same host** as the PHPCoin node tree it includes:
 
 | Item | Severity | Notes |
 |------|----------|-------|
-| **No IDE login** | Medium (by design) | Anyone gets an isolated `session_id` workspace; not multi-tenant server storage of secrets |
-| **`DEVELOPMENT = true`** in `config.php` | Low | Loads unminified component JS; set `false` in production for perf |
-| **Hardcoded `/var/www/...`** | Ops | Breaks if node not co-located; document server layout |
-| **`data/users.json`** | Low | Legacy Atheos users (`admin`/`user`); bypassed by PHPCoin auto-login |
-| **`workspace/users/`** | OK | Gitignored; 100+ local dirs on dev machine only |
-| **`Access-Control-Allow-Origin: *`** | Low | In `HEADERS`; review if tightening CORS |
-| **Gateway redirects** | OK | Real deploy/exec uses standard dapps wallet sign flow (no private keys in IDE session for mainnet) |
+| **No IDE login** | Medium (by design) | Isolated `session_id` workspace per browser |
+| **`DEVELOPMENT = true`** in `config.php` | Low | Unminified JS in prod; optional `false` |
+| **Hardcoded `/var/www/...`** | Ops | Requires node on same server |
+| **`data/users.json`** | Low | Legacy Atheos users; bypassed by auto-login |
+| **`workspace/users/`** | OK | Gitignored on server and in repo |
+| **Gateway redirects** | OK | Mainnet deploy/exec via dapps sign flow |
 
 ---
 
 ## Integration with node / docs
 
-- Uses current SCE APIs: `getSmartContract`, `getSmartContractCreateFee`, `getSmartContractExecFee`, `getSmartContractView`, `getSmartContractProperty`, etc.
-- **`node/docs/smart-contracts/`** — builder’s guide applies; **no mention of Atheos IDE** — add cross-link when touching node docs.
-- **Main site** — no prominent link to atheos in `site/index.php` (discoverability gap only).
+- SCE APIs: `getSmartContract`, create/exec fees, view, property, etc.
+- **`node/docs/smart-contracts/`** — SC rules; no Atheos IDE link yet (optional).
+- **Main site** — no link to atheos in `site/index.php` (optional discoverability).
 
 ---
 
-## Decision
-
-| | |
-|--|--|
-| **Verdict** | **Keep running** — official SC IDE for PHPCoin |
-| **Priority** | **LOW** — maintenance when node SC APIs or gateway change |
-| **Do not** | Rebuild as tx_data app; replace with archived experiments |
-| **Phase 2** | None unless Android wallet or web-wallet embeds SC authoring |
-
----
-
-## Recommended maintenance (optional)
+## Optional maintenance (not blocking)
 
 - [ ] Set `DEVELOPMENT` to `false` on production `config.php`
-- [ ] Push/sync `phpcoin-main` (3 local commits) to `phpcoinn/Atheos` if intended for server
 - [ ] Add link on phpcoin.net / node docs → “Smart Contract IDE”
-- [ ] Smoke test: virtual compile → testnet deploy → exec one demo contract
-- [ ] Document server vhost path in ops notes (if not already on phpcoin1)
+- [ ] Rotate GitHub PAT if still embedded in server `git remote` URL
 
 ---
 
@@ -141,7 +137,7 @@ Atheos **must run on the same host** as the PHPCoin node tree it includes:
 | Doc | Purpose |
 |-----|---------|
 | [node/docs/smart-contracts/builders-guide.md](../node/docs/smart-contracts/builders-guide.md) | SC authoring rules |
-| [node/docs/dapps/tx-data-developer-instruction-manual.md](../node/docs/dapps/tx-data-developer-instruction-manual.md) | tx_data (separate from SC IDE) |
-| [_master-docs/ROADMAP-MATRIX.md](../_master-docs/ROADMAP-MATRIX.md) | Ecosystem row: “integration check” — **done** with this review |
+| [node/docs/dapps/tx-data-developer-instruction-manual.md](../node/docs/dapps/tx-data-developer-instruction-manual.md) | tx_data (separate track) |
+| [_master-docs/ROADMAP-MATRIX.md](../_master-docs/ROADMAP-MATRIX.md) | Ecosystem planning |
 
 Update this file when deployment, engines, or SC gateway flows change.

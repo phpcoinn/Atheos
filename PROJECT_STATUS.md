@@ -58,10 +58,6 @@ atheos/
 - **Theme toggle** — `?toggleTheme` light/dark; PrimeFlex + Vue 3 from CDN.
 - **Transactions list** — SQL joins `transaction_data` for SC tx types 5/6/7 (aligned with node `tx_data` storage).
 
-### Legacy / unused
-
-- **`phpcoin/actions.php`** — older form-based SC UI; **not loaded** by current sidebar. Untracked locally; safe to delete or archive after confirming no external links.
-
 ---
 
 ## Production verification (2026-06-10)
@@ -134,7 +130,6 @@ Atheos **must run on the same host** as the PHPCoin node tree it includes:
 
 - [ ] Set `DEVELOPMENT` to `false` on production `config.php`
 - [ ] Push/sync `phpcoin-main` (3 local commits) to `phpcoinn/Atheos` if intended for server
-- [ ] Remove or git-ignore legacy `phpcoin/actions.php`
 - [ ] Add link on phpcoin.net / node docs → “Smart Contract IDE”
 - [ ] Smoke test: virtual compile → testnet deploy → exec one demo contract
 - [ ] Document server vhost path in ops notes (if not already on phpcoin1)

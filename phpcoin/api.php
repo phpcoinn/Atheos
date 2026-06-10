@@ -595,7 +595,7 @@ function loginWallet() {
     $_SESSION['auth_request_code']=$request_code;
     $engine = $_SESSION['engine'];
     $redirect = urlencode($engine['atheos_url']."/phpcoin/api.php?q=afterLoginWallet");
-    $url=$engine['node']."/dapps.php?url=".MAIN_DAPPS_ID."/wallet/auth.php?app=Athoes&request_code=$request_code&store_private_key=1&redirect=$redirect";
+    $url=$engine['node']."/dapps.php?url=".MAIN_DAPPS_ID."/legacywallet/auth.php?app=Athoes&request_code=$request_code&store_private_key=1&redirect=$redirect";
     api_echo($url);
 }
 function afterLoginWallet() {
@@ -619,7 +619,7 @@ function loginScWallet() {
     $_SESSION['auth_request_code']=$request_code;
     $engine = $_SESSION['engine'];
     $redirect = urlencode($engine['atheos_url']."/phpcoin/api.php?q=afterLoginScWallet");
-    $url=$engine['node']."/dapps.php?url=".MAIN_DAPPS_ID."/wallet/auth.php?app=Athoes&request_code=$request_code&redirect=$redirect";
+    $url=$engine['node']."/dapps.php?url=".MAIN_DAPPS_ID."/legacywallet/auth.php?app=Athoes&request_code=$request_code&redirect=$redirect";
     api_echo($url);
 }
 function afterLoginScWallet(){

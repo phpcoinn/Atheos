@@ -76,8 +76,10 @@ function api_get($url, &$error = null) {
 
 function getTxs($address) {
     global $db;
-    $sql='select * from (select id, block, height, src, dst, val, fee, signature, type, message, date, public_key, data, 1 as source
-               from transactions t where (t.src = ? or t.dst = ?) and t.type in (5,6,7)
+    $sql='select * from (select id, block, height, src, dst, val, fee, signature, type, message, date, public_key, td.data, 1 as source
+               from transactions t 
+               left join transaction_data td on td.tx_id = t.id
+               where (t.src = ? or t.dst = ?) and t.type in (5,6,7)
                 union all 
                (select id, null as block, height, src, dst, val, fee, signature, type, message, date, public_key, data, 0 as source
                 from mempool t where (t.src = ? or t.dst = ?) and t.type in (5,6,7))) as txs
@@ -243,7 +245,7 @@ function compile() {
         api_err("Error compiling contract: $err");
     }
     $code=base64_encode(file_get_contents($phar_file));
-    $interface = SmartContractEngine::verifyCode($code, $error, $address);
+    $interface = SmartContractEngine::verifyCode($code, $error, $address, true);
     if(!$interface) {
         api_err("Error verify smart contract: ".$error);
     }
@@ -311,9 +313,14 @@ function getSource() {
         $engine = $_SESSION['engine'];
         $node = $engine['node'];
         $smartContract = api_get($node . "/api.php?q=getSmartContract&address=".$address);
-        $code=$smartContract['code'];
-        $decoded=json_decode(base64_decode($code), true);
-        $code = base64_decode($decoded['code']);
+        if(!$smartContract) {
+            $code=$_SESSION['contract']['phar_code'];
+            $code=base64_decode($code);
+        } else {
+            $code=$smartContract['code'];
+            $decoded=json_decode(base64_decode($code), true);
+            $code = base64_decode($decoded['code']);
+        }
     }
 
     $phar_file = "/var/www/phpcoin/tmp/sc/".$address.".phar";

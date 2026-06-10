@@ -221,7 +221,7 @@ $settings = @$_SESSION['settings'];
                 <div class="col-12 sm:col-3">
                     Params:
                 </div>
-                <div class="col-12 sm:col-9 grid flex-column m-0">
+                <div class="col-12 sm:col-9 grid flex-column m-0" v-if="contract.interface.deploy">
                     <template v-for="param in contract.interface.deploy.params">
                         <div class="grid flex-grow-1 align-items-center">
                             <div class="col-6 sm:col-3">
